@@ -1,0 +1,21 @@
+
+# do... pip install -r requirements.txt
+
+numpy>=1.24
+torch>=2.0
+albumentations>=2.0.8      # transforms.py verified against 2.0.8 (new fill/std_range API)
+opencv-python>=4.8         # cv2, used directly by transforms.py
+Pillow>=10.0               # PIL image handling
+PyYAML>=6.0                # DataConfig.from_yaml
+medsegbench               # dataset source (MedSegBench .npz + registry)
+matplotlib>=3.7
+
+# Tests
+pytest>=7.4 # incase we want to test things
+
+# --- Added with the model / engine / scripts modules (not yet imported) ---
+# torchvision>=0.15
+# segment-anything          # SAM ViT-B backbone
+# matplotlib>=3.7           # scripts/make_figures.py
+# wandb>=0.16               # experiment tracking
+# tqdm>=4.65

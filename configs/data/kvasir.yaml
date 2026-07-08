@@ -1,0 +1,26 @@
+# configs/data/kvasir.yaml — Kvasir endoscopy polyp segmentation (RGB, binary).
+
+# dataset identity / acquisition
+name: kvasir              # -> KvasirMSBench
+size: 256                 # source resolution: 128 | 256 | 512
+category: null            # Kvasir has no sub-categories
+download: true            # fetch .npz from Zenodo into `root` if missing
+root: ~/.medsegbench
+
+# data-efficiency subset (null = full train split)
+n_train: null
+subset_seed: 0
+
+# preprocessing
+force_rgb: true           # no-op here (already RGB); load-bearing for grayscale sets
+img_size: 256             # target square size after resize/pad
+normalize: null           # null (/255) | imagenet
+
+# augmentation (shared across arms)
+aug_preset: medseg_default
+
+# loader
+batch_size: 8
+num_workers: 4
+pin_memory: true
+seed: 42

@@ -1,0 +1,42 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- virtual environments ---
+.venv/
+venv/
+env/
+.python-version
+
+# --- editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- data & model artifacts ---
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.npz
+*.npy
+
+# --- experiment tracking / logs --- # we need to figure what tracking we want to use ? 
+wandb/ # weights a biases may not be bad but just leaving this as dummy 
+*.log
+
+# --- local env / secrets ---
+.env

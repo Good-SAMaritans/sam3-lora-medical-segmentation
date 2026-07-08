@@ -1,0 +1,14 @@
+# Reproduce the env from the project root with:
+#     conda env create -f environment.yml
+#     conda activate sam-medseg
+name: sam-medseg
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu128 # we may need to revisit this one for the VM 
+      - torch==2.11.0+cu128
+      - torchvision==0.26.0+cu128
+      - -r requirements.txt

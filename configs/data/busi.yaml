@@ -1,0 +1,26 @@
+# configs/data/busi.yaml — BUSI breast-ultrasound lesion segmentation (grayscale, binary)
+
+# dataset identity / acquisition
+name: busi                # -> BusiMSBench
+size: 256                 # source resolution: 128 | 256 | 512
+category: null            # null = full set; "C1" (benign) / "C2" (malignant)
+download: true            # fetch .npz from Zenodo into `root` if missing
+root: ~/.medsegbench
+
+# data-efficiency subset (null = full train split; BUSI train is only ~452)
+n_train: null
+subset_seed: 0
+
+# preprocessing
+force_rgb: true           # BUSI is grayscale; replicate to 3 channels
+img_size: 256             # target square size after resize/pad
+normalize: null           # null (/255) | imagenet
+
+# augmentation (shared across arms)
+aug_preset: medseg_default
+
+# loader
+batch_size: 8
+num_workers: 4
+pin_memory: true
+seed: 42
