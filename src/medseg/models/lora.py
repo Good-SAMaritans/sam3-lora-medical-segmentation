@@ -72,9 +72,9 @@ class LoRA_qkv(nn.Module):
     
     def forward(self, x):
         #dim = 16 but qkv = nn.Linear(16,48) because 3*dim =48
-        #(2,5,16) = (batch, tokens, dim)
+        #(2,5,48) = (batch, tokens, dim)
         #the last axis of 48 is the three blocks glued together
-        base = self.qkv(x) #(2,5,16)
+        base = self.qkv(x) #(2,5,48)
       
         
         #base[...,:16] = Q (2,5,16)
@@ -85,7 +85,7 @@ class LoRA_qkv(nn.Module):
         #(2,5,16) untouched
         k = base[..., self.dim: 2*self.dim] 
 
-        #base[..., 32:48] = K (2,5,16)
+        #base[..., 32:48] = V (2,5,16)
         #(2,5,16) + (2,5,16) -> (2,5,16)
         v = base[..., 2*self.dim:] + self.lora_v(x)
 
