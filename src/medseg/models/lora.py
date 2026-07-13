@@ -79,7 +79,7 @@ class LoRA_qkv(nn.Module):
         
         #base[...,:16] = Q (2,5,16)
         #(2,5,16) + (2,5,16) -> (2,5,16)
-        q = base[:,:,:self.dim] + self.lora_q(x)
+        q = base[...,:self.dim] + self.lora_q(x)
 
         #base[..., 16:32] = K (2,5,16)
         #(2,5,16) untouched
