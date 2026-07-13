@@ -1,0 +1,26 @@
+# Local DEV environment for Apple Silicon (arm64) Macs — CPU/MPS, no CUDA.
+#
+# This is the Mac counterpart to environment.yml (the pinned CUDA/cluster spec,
+# which cannot install on macOS because its torch wheels are Linux+CUDA only).
+# Same torch VERSION as the cluster (2.11.0) so behavior matches; the difference
+# is only the backend — here you get the native arm64 wheel with the MPS (Metal)
+# GPU backend and CPU, selected at runtime by get_device().
+#
+# Use this for fast local iteration and smoke tests only. Report final numbers
+# from the CUDA env so every arm is compared on identical hardware.
+#
+# Reproduce from the project root with:
+#     conda env create -f environment.mac.yml
+#     conda activate sam-medseg-mac
+name: sam-medseg-mac
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      # No --extra-index-url and no +cuXXX tag: PyPI serves the arm64 macOS
+      # wheel (CPU + MPS) for these plain version pins.
+      - torch==2.11.0
+      - torchvision==0.26.0
+      - -r requirements.txt
