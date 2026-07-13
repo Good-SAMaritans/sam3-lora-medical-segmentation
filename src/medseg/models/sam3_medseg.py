@@ -52,11 +52,12 @@ class Sam3MedSeg(nn.Module):
             raise ValueError(f"unknown finetune_mode: {mode}")
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
+        # torch 2.10.0+cu128 has a bf16-autocast backward cuBLAS bug
+        # (CUBLAS_STATUS_INVALID_VALUE) - verified with a 3-line repro. Train in fp32 (weights are fp32 anyway). 
+        # Revisit bf16/AMP if the torch build is upgraded.
         image = self._prep_input(image)
-        with torch.autocast("cuda", dtype=torch.bfloat16):
-            feats = self.backbone(image)
-        feats = [f.float() for f in feats] # head runs in fp32 for stable logits
-        return self.head(feats) # (B,num_classes,1008,1008)
+        feats = self.backbone(image) # fp32 throughout
+        return self.head(feats)
 
     def trainable_parameters(self):
         return [p for p in self.parameters() if p.requires_grad]
