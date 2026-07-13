@@ -1,5 +1,5 @@
 """
-seg_head.py — FPN segmentation decoder.
+seg_head.py - FPN segmentation decoder.
 
 Turns SAM 3's 3-level feature pyramid into a dense mask. 
 Input feature maps are all 256-channel at strides 4/7/14 of a 1008 input: 288, 144, 72. 

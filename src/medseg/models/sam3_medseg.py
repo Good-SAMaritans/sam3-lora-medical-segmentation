@@ -1,5 +1,5 @@
 """
-sam3_medseg.py — SAM 3 medical segmentation model.
+sam3_medseg.py - SAM 3 medical segmentation model.
 
 Pipeline: (B,3,256,256) in [0,1]  -> resize 1008 + normalize(0.5)  ->
 SAM 3 vision backbone (bf16 autocast) -> FpnSegHead -> (B,1,1008,1008) logits.

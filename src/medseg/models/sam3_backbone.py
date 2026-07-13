@@ -1,5 +1,5 @@
 """
-sam3_backbone.py — SAM 3 vision backbone wrapper.
+sam3_backbone.py - SAM 3 vision backbone wrapper.
 
 Loads SAM 3 via build_sam3_image_model(), keeps only the vision path (backbone.forward_image), 
 and returns the 3-level FPN as an ordered fine->coarse list. 
