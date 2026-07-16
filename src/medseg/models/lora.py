@@ -55,64 +55,25 @@ class LoRALayer(nn.Module):
         #B(...): 4->768
         return self.B(self.A(x))* self.scaling
 
-class LoRA_qkv(nn.Module):
-    def __init__(self, qkv, lora_q, lora_v):
+
+class LinearWithLoRA(nn.Module):
+
+    def __init__(self, original_linear, r, alpha):
+       # parent constructor
         super().__init__()
 
-        #original fused linear (frozen)
-        # receive an exisitng layer
-        self.qkv = qkv
+        #store the pretrained Linear as a submodule
+        self.original = original_linear
 
-        #two LoRALayers
-        self.lora_q, self.lora_v = lora_q, lora_v
+        #build the adaptor. 
+        # LoRALayer(in_dim, out_dim, r, alpha) 
+        self.lora = LoRALayer(self.original.in_features, self.original.out_features, r, alpha)
 
-        #two LoRALayers
-        # = 768; width of each Q/K/V
-        self.dim = qkv.in_features
-    
     def forward(self, x):
-        #dim = 16 but qkv = nn.Linear(16,48) because 3*dim =48
-        #(2,5,48) = (batch, tokens, dim)
-        #the last axis of 48 is the three blocks glued together
-        base = self.qkv(x) #(2,5,48)
-      
-        
-        #base[...,:16] = Q (2,5,16)
-        #(2,5,16) + (2,5,16) -> (2,5,16)
-        q = base[...,:self.dim] + self.lora_q(x)
+    #two parallel paths through the same x, summed:
+    #- the frozen orginal : self.orignal(x)
+    #- the low-rank update self.lora(x)
+        base = self.original(x)
+        lora = self.lora(x)
 
-        #base[..., 16:32] = K (2,5,16)
-        #(2,5,16) untouched
-        k = base[..., self.dim: 2*self.dim] 
-
-        #base[..., 32:48] = V (2,5,16)
-        #(2,5,16) + (2,5,16) -> (2,5,16)
-        v = base[..., 2*self.dim:] + self.lora_v(x)
-
-        #glue them back into one tensor along last axis
-        #(2,5, 48)
-        return torch.cat([q,k,v],dim= -1)
-
-
-def inject_lora_into_sam(sam, r=4, alpha=4):
-    """
-    Freeze all of SAM, then wrap each encoder block's qkv
-    with LoRA on Q & V.
-
-    Only the LoRA adapters stay trainable.
-    """
-    #1. freeze everything
-    for p in sam.parameters():
-        p.requires_grad_(False)
-
-    #2. wrap each transfomer block's qkv
-    for blk in sam.image_encoder.blocks:
-        qkv = blk.attn.qkv          #the pretrained fused linear
-        dim = qkv.in_features       #768 for ViT-B
-        lora_q = LoRALayer(dim, dim, r, alpha)
-        lora_v = LoRALayer(dim, dim, r, alpha)
-
-        #swap in the wrapper
-        blk.attn.qkv = LoRA_qkv(qkv, lora_q, lora_v)
-
-    return sam
+        return base + lora
