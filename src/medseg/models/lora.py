@@ -16,9 +16,8 @@ It computes x->B(A(x)). (aplha/r)
 
 """
 
-import math
 import torch.nn as nn
-import torch
+
 
 class LoRALayer(nn.Module):
     def __init__(self, in_dim, out_dim, r, alpha):
@@ -77,3 +76,20 @@ class LinearWithLoRA(nn.Module):
         lora = self.lora(x)
 
         return base + lora
+
+def inject_lora_into_sam3(model, r=4, alpha=4):
+    """
+    Freeze all of SAM 3, then wrap each vision-encoder layer's
+    q_proj and v_proj with LoRA. Only the adapters stay trainable.
+    """
+    # 1. freeze everything
+    for p in model.parameters():
+        p.requires_grad_(False)
+
+    # 2. wrap q_proj and v_proj in every vision-encoder layer
+    for layer in model.vision_encoder.backbone.layers:
+        attention = layer.attention
+        attention.q_proj = LinearWithLoRA(attention.q_proj, r, alpha)
+        attention.v_proj = LinearWithLoRA(attention.v_proj, r, alpha)
+
+    return model
