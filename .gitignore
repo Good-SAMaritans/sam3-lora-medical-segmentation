@@ -40,3 +40,4 @@ wandb/ # weights a biases may not be bad but just leaving this as dummy
 
 # --- local env / secrets ---
 .env
+vendor/
