@@ -1,5 +1,5 @@
 import torch
-from medseg.models.lora import LoRALayer, LinearWithLoRA
+from medseg.models.lora import LoRALayer, LinearWithLoRA, LoRA_qkv
 import torch.nn as nn
 
 def test_output_shape():
@@ -35,3 +35,35 @@ def test_linear_with_lora():
 
     # 3. shape preserved
     assert wrapped(x).shape == original(x).shape
+
+
+def test_lora_qkv_slices():
+    # fused attention like SAM3 vitdet: one Linear producing [ Q | K | V ]
+    dim = 16
+    qkv = nn.Linear(dim, 3 * dim)
+    wrapped = LoRA_qkv(qkv,
+                       LoRALayer(dim, dim, r=4, alpha=4),
+                       LoRALayer(dim, dim, r=4, alpha=4))
+
+    # 1. adapters off (B=0): perfect drop-in, bit-for-bit — on the usual
+    # (batch, tokens, dim) AND the vitdet 4D (batch, H, W, dim) input
+    for x in (torch.randn(2, 5, dim), torch.randn(2, 3, 3, dim)):
+        assert torch.equal(wrapped(x), qkv(x))
+
+    x = torch.randn(2, 3, 3, dim)          # keep the 4D case for the slice checks
+    base = qkv(x)
+
+    # 2. turn on ONLY lora_q: Q third moves; K and V thirds must be
+    # bit-identical (torch.equal, not allclose — K is supposed to BE the
+    # original numbers, not merely close to them)
+    nn.init.normal_(wrapped.lora_q.B.weight)
+    out = wrapped(x)
+    assert not torch.equal(out[..., :dim], base[..., :dim])
+    assert torch.equal(out[..., dim:2*dim], base[..., dim:2*dim])
+    assert torch.equal(out[..., 2*dim:], base[..., 2*dim:])
+
+    # 3. turn on lora_v too: V third moves, K STILL untouched
+    nn.init.normal_(wrapped.lora_v.B.weight)
+    out = wrapped(x)
+    assert not torch.equal(out[..., 2*dim:], base[..., 2*dim:])
+    assert torch.equal(out[..., dim:2*dim], base[..., dim:2*dim])
