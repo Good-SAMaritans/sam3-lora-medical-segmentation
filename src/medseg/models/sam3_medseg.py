@@ -12,8 +12,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 from .sam3_backbone import Sam3Backbone
 from .seg_head import FpnSegHead
+from .lora import LoRALayer, LoRA_qkv
 
 SAM3_SIZE = 1008
 SAM3_MEAN = 0.5
@@ -45,9 +47,19 @@ class Sam3MedSeg(nn.Module):
             for p in self.head.parameters():
                 p.requires_grad = True
         elif mode == "lora":
-            # Owned by Nik. Freeze backbone; LoRA adapters injected + head trained.
-            raise NotImplementedError(
-                "lora mode: Nik's arm. See spec section 3. Plug LoRA injection here.")
+            # freeze ALL backbone params. inject LoRA into each fused qkv,
+            # head says trainable 
+            for p in self.backbone.parameters():
+                p.requires_grad = False
+
+            #2) wrap each vitdet block's fused qkv with LoRA
+            for block in self.backbone.backbone.vision_backbone.trunk.blocks :
+                qkv = block.attn.qkv #1024 , read it
+                dim = qkv.in_features
+                lora_q = LoRALayer( dim, dim, r=4, alpha=4)
+                lora_v = LoRALayer(dim, dim,  r=4, alpha=4)
+                block.attn.qkv = LoRA_qkv(qkv, lora_q, lora_v)
+            
         else:
             raise ValueError(f"unknown finetune_mode: {mode}")
 
