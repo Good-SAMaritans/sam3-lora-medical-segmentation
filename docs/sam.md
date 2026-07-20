@@ -1,83 +1,121 @@
-# SAM weights: download & use
+# SAM 3 weights: access, download and use
 
-The Segment Anything Model (SAM) checkpoint is the **frozen pretrained backbone**
-every adaptation arm builds on (zero-shot, decoder-only, LoRA, full fine-tuning).
-It is not stored in the repo — this doc is how you get it and use it.
+The base model for every adaptation arm (zero-shot, decoder-only, LoRA, full
+fine-tuning) is **SAM 3**, loaded through Meta's native `sam3` package. The
+weights are license-gated and large, so neither the package source nor the
+checkpoint lives in this repo. This doc is how you get both onto a machine.
 
----
+## Why none of this is committed
 
-## Why it isn't in the repo
+- The checkpoint is ~6.9 GB and gated behind a license: it cannot be
+  redistributed through our repo.
+- The `sam3` package source we build against is a clone of
+  `github.com/facebookresearch/sam3`. Where it exists locally (see the Mac
+  section), it sits in `vendor/`, which is gitignored.
 
-The checkpoint is a ~375 MB binary. Committing it would bloat every clone and
-every fetch, so it is **gitignored** (`.gitignore` has both `checkpoints/` and
-`*.pth`). The repo stores the *instructions* to fetch it, not the file itself — so
-a fresh `git clone` gives you the code but **not** the weights. You download them
-once, per machine.
+A fresh `git clone` of our repo therefore gives you the code but not the base
+model. Setup is once per machine.
 
-## Download (first-time setup)
+## 1. Get access (once per person)
 
-From the repo root:
+1. Create a HuggingFace account and request access to the gated repo at
+   `huggingface.co/facebook/sam3` (approval took about a day for us; reports
+   range from days to weeks).
+2. Create a **read** token: HF Settings, Access Tokens, "Create new token".
+3. Authenticate the machine:
+
+   ```bash
+   hf auth login        # paste the read token
+   hf auth whoami       # should print your username
+   ```
+
+## 2. Download the weights (once per machine)
+
+Either pre-fill the cache explicitly (recommended, shows progress):
 
 ```bash
-mkdir -p checkpoints
-curl -L -o checkpoints/sam_vit_b_01ec64.pth \
-  https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
+hf download facebook/sam3        # ~6.9 GB into ~/.cache/huggingface/hub/
 ```
 
-- `-L` follows redirects (the URL bounces to a CDN); without it you'd save the
-  redirect page instead of the file.
-- `-o <path>` writes to `checkpoints/sam_vit_b_01ec64.pth` (gitignored).
+or let the model builder fetch on first use (`load_from_HF=True` is the
+default). Either way the weights land in the shared HF cache, and every later
+load reads from disk.
 
-## Verify it downloaded intact
+### Pin the revision
+
+HF model repos are git repos. If the upstream weights are ever updated, an
+unpinned load would silently give different arms different base models and
+break the controlled comparison. The snapshot we downloaded and verified is:
+
+```
+3c879f39826c281e95690f02c7821c4de09afae7   (downloaded 2026-07-17)
+```
+
+Proposed as the team-wide pin; belongs in the model config once that exists.
+You can read your local snapshot hash off the cache path:
 
 ```bash
-ls -lh checkpoints/sam_vit_b_01ec64.pth        # expect ~375M
-python -c "import torch; print('keys:', len(torch.load('checkpoints/sam_vit_b_01ec64.pth', map_location='cpu')))"
+ls ~/.cache/huggingface/hub/models--facebook--sam3/snapshots/
 ```
 
-A healthy checkpoint prints a few hundred tensor keys. A few-KB file or a load
-error means a partial download (usually a missing `-L`) — delete and retry.
-
-## Which checkpoint, and why
-
-SAM ships in three sizes. We use **ViT-B**.
-
-| Variant | File | Size | Registry key |
-|---|---|---|---|
-| ViT-B (base) | `sam_vit_b_01ec64.pth` | ~375 MB | `vit_b` |
-| ViT-L (large) | `sam_vit_l_0b3195.pth` | ~1.2 GB | `vit_l` |
-| ViT-H (huge) | `sam_vit_h_4b8939.pth` | ~2.5 GB | `vit_h` |
-
-ViT-B is the lightest to fine-tune, fits comfortably on Colab and an MPS Mac, and
-is what the project proposal specifies. (The `01ec64` in the filename is just a
-version hash from Meta.) To use a bigger variant, download its file above and pass
-the matching registry key.
-
-## Load and use it in code
+## 3. Load and use it in code
 
 ```python
-from segment_anything import sam_model_registry
-from medseg.models.lora import inject_lora_into_sam
+from medseg.models import Sam3MedSeg
 
-# load the frozen pretrained backbone from the file you downloaded
-sam = sam_model_registry["vit_b"](checkpoint="checkpoints/sam_vit_b_01ec64.pth")
-
-# freeze SAM, inject trainable LoRA adapters into the encoder's Q/V projections
-inject_lora_into_sam(sam, r=4, alpha=4)
-# -> only ~147K of ~94M params trainable (~0.16%)
+# the shared task model: SAM 3 vision backbone + FPN seg head
+model = Sam3MedSeg(finetune_mode="lora")     # or "full" / "decoder_only"
 ```
 
-`sam_model_registry[key](checkpoint=...)` builds the SAM architecture for that
-variant and loads the weights from the `.pth` file. The `segment-anything` package
-must be installed first (`pip install "git+https://github.com/facebookresearch/segment-anything.git"`).
+`Sam3MedSeg` builds the backbone internally via
+`sam3.model_builder.build_sam3_image_model()`, which loads the gated weights
+from the HF cache. The `finetune_mode` flag selects what is trainable, so all
+arms share one model definition. See [lora.md](lora.md) for what the LoRA mode
+does and its parameter counts.
 
-The checkpoint path is currently passed directly; once `configs/model/sam_vit_b.yaml`
-exists it will hold this path (and `lora_r`, `lora_alpha`) so it isn't hardcoded and
-can be overridden per machine.
+Notes on the builder itself:
 
-## What "frozen" means here
+- `build_sam3_image_model()` defaults to `device="cpu"`; move the model
+  yourself (`.cuda()`, `.to("mps")`) as needed.
+- The full `Sam3Image` it returns is 840.5M params (vision + language +
+  detection). Our wrapper keeps only the vision path, 455.1M params; the
+  language encoder and the DETR detection machinery are unused in this project.
 
-During LoRA (and decoder-only) fine-tuning, these downloaded weights are **not**
-updated — `inject_lora_into_sam` sets `requires_grad = False` on all of SAM, and
-only the small adapters train. So the checkpoint stays exactly as downloaded; the
-learned part lives in a separate, tiny adapter file. See [LoRA](lora.md).
+## 4. Installing the `sam3` package
+
+### Cluster / Linux with CUDA (the straightforward path)
+
+Requirements from upstream: Python >= 3.12, torch >= 2.7, CUDA >= 12.6.
+
+```bash
+git clone https://github.com/facebookresearch/sam3.git
+pip install -e sam3
+```
+
+### Apple Silicon Mac (local dev; officially unsupported upstream)
+
+The package assumes CUDA in a few places, but the image-model path runs fine
+on CPU/MPS with the workarounds below. This is what the local `sam3-native`
+conda env contains (Python 3.12; our data/test deps are installed in the same
+env so one env runs everything):
+
+| Problem | Workaround |
+|---|---|
+| `pkg_resources` removed in setuptools >= 81 | `pip install "setuptools<81"` |
+| Undeclared deps | `pip install einops pycocotools psutil` |
+| `triton` has no macOS build, but is imported at module load | a stub `triton` package in the env's site-packages that satisfies the imports and raises if a kernel is ever actually launched (it also refuses imports that originate inside torch, so torch correctly detects "no triton") |
+| Two hardcoded `device="cuda"` lines in `model/position_encoding.py` and `model/decoder.py` | patched locally to fall back to CPU when CUDA is unavailable |
+| `sam3` pins `numpy<2`, our stack needs `numpy>=2` | keep numpy 2.x; the pin is metadata only, everything imports and runs |
+
+The patched clone lives at `vendor/sam3-repo` (gitignored) and is installed
+editable: `pip install -e vendor/sam3-repo`. None of these workarounds are
+needed on the CUDA cluster.
+
+## 5. What "frozen" means here
+
+In the LoRA and decoder-only arms the downloaded weights are never updated:
+`requires_grad` is set to `False` on the whole backbone and only the small
+task-specific parts train (LoRA adapters and/or the seg head). The checkpoint
+on disk stays exactly as downloaded; what we learn lives in separate, small
+files. The full fine-tuning arm is the one that updates backbone weights, and
+it starts from this same pinned checkpoint.

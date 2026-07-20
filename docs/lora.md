@@ -1,252 +1,207 @@
-# LoRA adaptation of SAM
+# LoRA adaptation of SAM 3
 
-How we adapt the frozen Segment Anything Model (SAM) into a medical segmenter by
-training a tiny set of low-rank adapters instead of the full network.
+How we adapt the frozen SAM 3 vision backbone into a medical segmenter by
+training a tiny set of low-rank adapters (plus the shared seg head) instead of
+the full network.
 
 ---
 
 ## 1. The idea: adapt a big model by training a small update
 
 Fine-tuning normally means updating a weight matrix `W` with a full-size update
-`ΔW` of the same shape — for SAM's attention projections that's `768 × 768 ≈ 590K`
-numbers *per layer*, and a whole new copy of the encoder per task.
+`dW` of the same shape. For SAM 3's attention projections that is `1024 x 1024`
+numbers per projection per layer, and a whole new copy of the backbone per task.
 
-**LoRA** (Low-Rank Adaptation) bets that the *update* you actually need is
-low-rank — that `ΔW` can be well-approximated by the product of two skinny
-matrices:
-
-```
-ΔW ≈ B · A      where  A is (r × d),  B is (d × r),  r ≪ d
-```
-
-So instead of `d²` numbers you train `2·r·d`. The layer's forward pass becomes:
+**LoRA** (Low-Rank Adaptation) bets that the update you actually need is
+low-rank: `dW` can be well approximated by the product of two skinny matrices:
 
 ```
-y = W·x  +  (B·A)·x · (α / r)
-    └────┘   └──────────────┘
-   frozen      trainable LoRA update
+dW ~ B * A      where  A is (r x d),  B is (d x r),  r << d
+```
+
+So instead of `d^2` numbers you train `2*r*d`. The layer's forward pass becomes:
+
+```
+y = W*x  +  (B*A)*x * (alpha / r)
+    -----    ------------------
+    frozen    trainable LoRA update
 ```
 
 Two properties make this work and are worth knowing:
 
-- **`W` is frozen.** SAM's pretrained weights are never touched. Only `A` and `B`
-  get gradients — that is the parameter efficiency.
-- **`B` is initialized to zero, `A` to random.** At step 0, `B·A = 0`, so the
-  adapted model is *identical* to pretrained SAM. Training gently moves away from
-  it rather than jolting the foundation model with a random perturbation. (Zeroing
-  *both* would kill gradient flow and the adapter would never learn — so only `B`.)
+- **`W` is frozen.** The pretrained weights are never touched. Only `A` and `B`
+  get gradients; that is the parameter efficiency.
+- **`B` is initialized to zero, `A` to random.** At step 0, `B*A = 0`, so the
+  adapted model is identical to the pretrained one. Training gently moves away
+  from it rather than jolting the foundation model with a random perturbation.
+  (Zeroing both would kill gradient flow and the adapter would never learn, so
+  only `B`.)
 
-We never form the `d × d` matrix `B·A`. We apply it through the rank-`r`
-bottleneck: `B(A(x))` goes `d → r → d`, which is also why it is cheap at compute
-time, not just storage time.
+We never form the `d x d` matrix `B*A`. We apply it through the rank-`r`
+bottleneck: `B(A(x))` goes `d -> r -> d`, which is also why it is cheap at
+compute time, not just storage time.
 
-## 2. Where LoRA goes in SAM
+## 2. Where LoRA goes in SAM 3
 
-SAM's image encoder is a Vision Transformer — a stack of 12 attention blocks. Each
-block computes query/key/value with a single fused linear:
+The team model keeps only SAM 3's **vision path**: a ViTDet-style ViT trunk
+(32 blocks, d = 1024, windowed attention over a spatial grid) followed by an
+FPN neck that produces a 3-level feature pyramid. The language encoder and the
+DETR detection machinery of full SAM 3 are unused in this project (our datasets
+are single-concept, so promptable detection buys nothing; see section 7).
+
+Each trunk block computes query/key/value with a single fused linear:
 
 ```python
-self.qkv = nn.Linear(dim, dim * 3)     # output = [ Q | K | V ] concatenated
+self.qkv = nn.Linear(1024, 3072)     # output = [ Q | K | V ] concatenated
 ```
 
-Following the SAMed recipe (and the original LoRA paper's ablation), we inject
-adapters into the **Q and V** projections only, leaving **K** untouched — Q and V
-are the non-redundant levers (Q shifts *where* attention looks, V shifts *what* it
-aggregates; K is largely reachable through Q via the `QKᵀ` product).
+Following the SAMed recipe (and the LoRA paper's ablation), we inject adapters
+into the **Q and V** projections only, leaving **K** untouched. Q and V are the
+non-redundant levers: Q shifts where attention looks, V shifts what it
+aggregates; K is largely reachable through Q via the `QK^T` product.
 
-The wrapper runs the frozen `qkv`, then adds the LoRA deltas onto the Q and V
-slices of its output:
-
-```
-qkv(x)  →  [   Q    |   K    |   V    ]        (shape (..., 3·dim))
-                +Δq      +0       +Δv
-            └── LoRA ──┘        └─ LoRA ─┘
-```
-
-Because the wrapper's output has the exact same shape as the original `qkv`, it is
-a drop-in replacement — the rest of SAM's attention code runs unchanged.
-
-## 3. Parameter efficiency (SAM ViT-B, r = 4)
+The `LoRA_qkv` wrapper runs the frozen `qkv`, then adds the LoRA deltas onto
+the Q and V slices of its output:
 
 ```
-Before LoRA:  93,735,472 / 93,735,472 trainable  (100.00%)
-After  LoRA:     147,456 / 93,882,928 trainable  (  0.157%)
+qkv(x)  ->  [   Q    |   K    |   V    ]        (shape (..., 3*1024))
+                +dq       +0       +dv
+             --- LoRA ---        -- LoRA --
 ```
 
-**LoRA trains ~147K params instead of ~94M — a ~635× reduction.** The trainable
-count derives directly from the architecture:
+Because the wrapper's output has the exact same shape as the original `qkv`,
+it is a drop-in replacement; the rest of the attention code runs unchanged.
+One vitdet-specific detail: the trunk keeps tokens as a 4D `(B, H, W, C)` grid
+rather than a flattened `(B, tokens, C)` sequence, so the wrapper slices with
+`[..., :dim]` ellipsis indexing, which works for any leading shape. The slice
+isolation (Q and V move, K bit-identical) is unit-tested.
 
-```
-147,456 = 12 blocks × 2 adapters (Q, V) × (2 · r · d)
-        = 12 × 2 × (2 · 4 · 768)
-        = 12 × 2 × 6,144
-```
+## 3. The team architecture and where the trainable parts sit
 
-Practical consequences: far less memory, faster training, and adapter checkpoints
-of ~600 KB instead of a 375 MB model — with the frozen SAM shared across tasks.
+All arms share one model, `Sam3MedSeg(finetune_mode=...)`, so the comparison
+is apples to apples: same backbone, same head, the arms differ only in what is
+trainable inside the backbone.
 
-## 4. How it trains — the box-prompt loop
+```mermaid
+flowchart LR
+    IMG["image<br/>(B,3,256,256) in [0,1]"] --> PREP["resize to 1008<br/>normalize (0.5/0.5)"]
+    PREP --> TRUNK["ViTDet trunk<br/>32 blocks, d=1024<br/>frozen + LoRA on each fused qkv"]
+    TRUNK --> NECK["FPN neck (frozen)<br/>pyramid: 288 / 144 / 72, 256ch"]
+    NECK --> HEAD["FpnSegHead (trainable)<br/>top-down fuse + classify"]
+    HEAD --> OUT["mask logits<br/>(B,1,1008,1008)"]
+    OUT --> LOSS["BCE + Dice loss"]
+    GT["ground-truth mask"] --> LOSS
+    LOSS -. "gradients reach only the<br/>LoRA A/B matrices and the head" .-> TRUNK
 
-SAM is **promptable**: it does not segment "the foreground" in the abstract, it
-segments the object indicated by a *prompt* (here, a bounding box). Our data gives
-`(image, ground-truth mask)` pairs but no prompts, so at training time we
-manufacture the box from the ground-truth mask (with small random jitter, following
-MedSAM, so the model tolerates imperfect human-drawn boxes).
-
-The box says *where* the object is; SAM must still predict the exact per-pixel
-boundary — which is 99% of the difficulty the box does not give away.
-
-```
-image ──► [SAM image encoder]──────────┐
-  │            (frozen + LoRA)          ▼
-  │                              image features
-ground-truth mask                       │
-  │                                     ▼
-  └─► mask_to_box ──► box ─► [prompt encoder] ─► [mask decoder] ─► predicted mask
-        (box prompt)          (frozen)            (frozen/tuned)         │
-                                                                        ▼
-                          ground-truth mask ──────► [Dice + BCE loss] ◄──┘
-                                                          │
-                                                          ▼
-                                              gradients → update LoRA adapters only
+    classDef trainable fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20;
+    classDef frozen fill:#eceff1,stroke:#90a4ae,color:#37474f;
+    class HEAD trainable;
+    class TRUNK,NECK,PREP frozen;
 ```
 
-Notes on the loop:
+- **No prompts.** The old promptable-segmentation designs (boxes, then text)
+  are gone with the mask decoder and DETR. The head always answers one fixed
+  question per dataset: where is the polyp (Kvasir) / lesion (BUSI).
+- The **ground-truth mask is used only in the loss**; nothing derived from it
+  enters the model.
+- **The seg head trains in every arm** (it is new and has no pretrained
+  weights). The LoRA arm's trainable set is therefore adapters + head.
+- Training runs in fp32: bf16 autocast crashes the backward pass on the
+  cluster's torch/CUDA build, and casting the backbone to bf16 corrupts
+  SAM 3's position embeddings. The backbone wrapper also patches an
+  inference-only fused MLP op in vitdet that otherwise blocks gradients:
+  relevant to any arm that backpropagates through the backbone, ours included.
 
-- The **ground-truth mask appears twice** — once to *derive the box* (input side),
-  once to *score the prediction* (loss side). It is never fed to the model as a
-  mask, only as the coarse box. So no answer is leaked: the box keeps only the
-  enclosing rectangle and discards the boundary the model must reconstruct.
-- **Only the LoRA adapters are updated.** The image encoder's original weights, the
-  prompt encoder, and (in the LoRA arm) most of the network are frozen, so gradients
-  flow into just the ~147K adapter params.
+## 4. Parameter efficiency (r = 4, verified 2026-07-20)
+
+```
+Sam3MedSeg(finetune_mode="lora"):
+1,066,113 / 455,105,921 trainable  (0.2343%)
+  =   524,288 LoRA adapters   (32 blocks x 2 adapters x 2*4*1024)
+  +   541,825 FpnSegHead      (trained in every arm)
+```
+
+The adapter count derives directly from the architecture:
+
+```
+524,288 = 32 blocks x 2 adapters (Q, V) x (2 * r * d)
+        = 32 x 2 x (2 * 4 * 1024)
+        = 32 x 2 x 8,192
+```
+
+Compared to the full fine-tuning arm, which updates all 455.1M params of the
+same model, the LoRA arm trains about **427x fewer** parameters. Counting only
+what LoRA adds inside the backbone, the adapters are **0.12%** of the frozen
+454.5M-param vision path. Checkpoint consequences: the learned state of this
+arm is ~2 MB of adapters plus ~2 MB of head, against ~1.8 GB for a full
+backbone copy, with the frozen base shared across tasks.
+
+(The full `Sam3Image` release is 840.5M params; the 455.1M above is the vision
+path our task model keeps. Quote percentages against 455.1M, the model that
+actually trains and runs.)
 
 ## 5. Code map
 
 | Piece | File | What it is |
 |---|---|---|
-| `LoRALayer` | `src/medseg/models/lora.py` | Low-rank adapter for one projection: `B(A(x))·(α/r)` |
-| `LoRA_qkv` | `src/medseg/models/lora.py` | Wraps SAM's fused qkv; adds LoRA to Q & V slices |
-| `inject_lora_into_sam` | *(removed)* | Froze SAM, wrapped every encoder block's qkv. Lived in `sam_lora.py`, which was folded into `lora.py` (commit `ea56381`); the function itself no longer exists — see §7 for the current gap. |
-| Tests | `tests/test_lora.py` | Shape / zero-at-init / param-count checks |
-| Demo | `notebooks/02_lora.ipynb` | Loads SAM, injects LoRA, prints the param counts above |
+| `LoRALayer` | `src/medseg/models/lora.py` | Low-rank adapter for one projection: `B(A(x))*(alpha/r)`, B zero-init |
+| `LoRA_qkv` | `src/medseg/models/lora.py` | Wraps a fused qkv Linear; adds LoRA to the Q and V slices, K untouched |
+| `LinearWithLoRA` | `src/medseg/models/lora.py` | Generic wrapper for a single (non-fused) Linear; used by the earlier HF-transformers port, kept as the general-purpose variant |
+| `inject_lora_into_sam3` | `src/medseg/models/lora.py` | HF-transformers edition of the injection (separate q_proj/v_proj); superseded by the `Sam3MedSeg` path below |
+| `"lora"` mode | `src/medseg/models/sam3_medseg.py` | The live injection: freeze backbone, wrap all 32 `blocks[i].attn.qkv`, head stays trainable |
+| Tests | `tests/test_lora.py` | shape / zero-at-init / param-count / wrapper-equality / slice-isolation (incl. 4D input) |
+| Demo | `notebooks/02_lora.ipynb` | Builds the model, shows the injection targets and the counts above |
 
-Hyperparameters: rank `r = 4`, scaling `α = 4`, encoder dim `d = 768` (ViT-B).
+Hyperparameters: rank `r = 4`, scaling `alpha = 4`, trunk width `d = 1024`.
+Currently hardcoded in the `"lora"` branch; moving them (plus the target set)
+into a model config is on the list, so the {q,v} vs {q,k,v,o} ablation is a
+config change.
+
+Ordering rule worth remembering when reading the injection code: **freeze
+before wrap**. The freeze loop iterates the parameters that exist at that
+moment; wrapping afterwards means the freshly created adapters are born
+trainable and untouched by the freeze. Wrapping first would sweep the adapters
+into the freeze and silently produce a decoder-only model. The tripwire for
+any such mistake (including running the injection twice) is the trainable
+count: anything other than 1,066,113 means the injection state is wrong.
 
 ## 6. Status
 
-- [x] `LoRALayer` + tests
-- [x] `LoRA_qkv` wrapper (Q/V injection, K untouched)
-- [x] `inject_lora_into_sam` — verified on real SAM ViT-B (numbers above)
-- [ ] Box-prompt simulation (`mask_to_box`)
-- [ ] Training harness: SAM forward, Dice + BCE loss, train/val loop
-- [ ] Adapter-only save/load; `configs/model/sam_vit_b.yaml`
+- [x] `LoRALayer`, `LinearWithLoRA`, `LoRA_qkv` + unit tests (5 passing)
+- [x] Injection into the team model: `Sam3MedSeg(finetune_mode="lora")`,
+      counts verified on the real gated weights (numbers above)
+- [ ] Training harness wiring: experiment config for the LoRA arm, smoke run,
+      then full runs on the cluster
+- [ ] Adapter-only save/load (small checkpoint files)
+- [ ] Model config (`lora_r`, `lora_alpha`, target set, weight revision pin)
+- [ ] Ablations: rank sweep; {q,v} vs {q,k,v,o}
 
-## 7. SAM 3 plan — CURRENT (supersedes the SAM-1 specifics in §4–6)
+## 7. History (git has the details)
 
-> **2026-07-16:** the team standardized on **SAM 3**. Sections above describe the
-> SAM 1 prototype and are kept for the report's "what changed and why" narrative.
->
-> **2026-07-17 — correction.** The 07-16 note said SAM 3 meant HuggingFace
-> `transformers` with separate `q_proj`/`v_proj`, and that `LoRA_qkv` was therefore
-> obsolete. **That was wrong.** The team uses Meta's own `sam3` package, whose
-> attention is **fused-qkv** (`nn.Linear(dim, 3*dim)`) like SAM 1. So `LoRA_qkv` is
-> the live wrapper and has been restored; the `LinearWithLoRA` /
-> `inject_lora_into_sam3` path is HF-only and does **not** apply to our stack.
-> Everything below written against the HF architecture is marked accordingly.
+The design went through three phases; the earlier two are preserved in git
+history and are part of the project's "what changed and why" narrative:
 
-### How LoRA + SAM 3 + MedSeg data fit together
-
-```mermaid
-flowchart TB
-    subgraph DATA["data pipeline — DONE (src/medseg/data/)"]
-        IMG["Kvasir / BUSI image"]
-        GT["ground-truth binary mask"]
-    end
-    TXT["text prompt — constant per dataset:<br/>'polyp' (Kvasir) / 'lesion' (BUSI)"]
-    PROC["Sam3Processor<br/>resize + normalize image, tokenize text"]
-
-    subgraph SAM3["Sam3Model — 840.4M params, all FROZEN except LoRA"]
-        VE["vision encoder<br/>32 ViT layers, d=1024, RoPE attention<br/>LoRA on q_proj + v_proj of every layer"]
-        TE["text encoder — 24 layers<br/>word → concept embedding"]
-        GE["geometry encoder<br/>(unused in text-prompt plan;<br/>FALLBACK if text prompting fails)"]
-        DETR["DETR encoder + decoder<br/>matches concept against image features,<br/>proposes instances"]
-        MD["mask decoder → mask per instance"]
-    end
-
-    PRED["predicted mask(s)"]
-    LOSS["Dice + BCE loss"]
-
-    IMG --> PROC --> VE
-    TXT --> PROC --> TE
-    VE --> DETR
-    TE --> DETR
-    GE -.-> DETR
-    DETR --> MD --> PRED
-    PRED --> LOSS
-    GT --> LOSS
-    LOSS -. "backprop: gradients flow THROUGH the frozen<br/>decoder/DETR back to the vision encoder,<br/>but only the LoRA A/B matrices update" .-> VE
-
-    classDef trainable fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20;
-    classDef frozen fill:#eceff1,stroke:#90a4ae,color:#37474f;
-    class VE trainable;
-    class TE,GE,DETR,MD frozen;
-```
-
-- **Trainable (green): only the LoRA adapters** inside the vision encoder —
-  `32 layers × 2 projections × 2·r·d = 524,288` params at `r = 4` (**0.062%** of
-  840.9M; verified against the config-built model, exactly matching the paper
-  prediction). Everything else — including the text encoder and the entire
-  detection/masking head — stays frozen.
-- The ground-truth mask is used **only in the loss**; unlike the SAM-1 box-prompt
-  loop (§4), nothing derived from it enters the model. The prompt is a constant
-  string, identical for every image in a dataset.
-- ⚠️ The internal wiring shown (what feeds what between encoders, DETR, and the
-  mask decoder) is inferred from `named_modules()` and the SAM 3 release notes —
-  **verify against a real forward pass once gated weights are available.**
-
-### ⚠️ The unproven assumption this plan rests on
-
-SAM 3's text prompting (Promptable Concept Segmentation) was trained on **natural
-images**. Our plan assumes the frozen text encoder + DETR matcher can do something
-sensible with the concept "polyp" on endoscopy frames and "lesion" on ultrasound —
-vocabulary and imagery far from its training distribution. This matters doubly for
-the LoRA arm: we only adapt vision features; the concept-matching machinery itself
-stays frozen (Sean's full fine-tune can fix it — we can't). If zero-shot returns
-*no detections at all* (rather than merely bad masks), gradients into our adapters
-may be degenerate.
-
-**First action once weights land:** zero-shot sanity check on 5–10 Kvasir + BUSI
-images. Outcomes: (a) rough-but-sane masks → proceed, LoRA sharpens them;
-(b) empty/garbage → fall back to box prompts via the `geometry_encoder`, or rethink
-with the team; (c) in between → try prompt wording ("polyp" / "growth" / "lesion").
-
-### Code map (current)
-
-| Piece | File | What it is |
-|---|---|---|
-| `LoRALayer` | `src/medseg/models/lora.py` | Low-rank adapter for one projection: `B(A(x))·(α/r)` — unchanged since SAM 1 |
-| `LinearWithLoRA` | `src/medseg/models/lora.py` | Frozen original Linear + one LoRALayer; `forward = original(x) + lora(x)` |
-| `inject_lora_into_sam3` | `src/medseg/models/lora.py` | Freeze all of SAM 3, wrap `q_proj`/`v_proj` in all 32 vision-encoder layers |
-| Tests | `tests/test_lora.py` | Shape / zero-at-init / param-count / wrapper-equality checks |
-| Exploration | `notebooks/03_Sam3_explore.ipynb` | Architecture verification + injection param counts |
-
-Hyperparameters: rank `r = 4`, scaling `α = 4`, encoder dim `d = 1024`.
-TODO: make the target set configurable ({q,v} today; {q,k,v,o} ablation planned).
-
-### Status
-
-- [x] `LoRALayer` + `LinearWithLoRA` + tests (4/4 passing)
-- [x] `inject_lora_into_sam3` — verified on config-built SAM 3: 524,288 / 840,900,662 (0.0623%)
-- [ ] HF gated access (requested 2026-07-16) → re-verify on real weights; pin revision with Sean
-- [ ] Zero-shot text-prompt sanity check (the assumption test above)
-- [ ] Training harness: `Sam3Processor` batching, Dice+BCE, train/val loop
-- [ ] Adapter-only save/load; `configs/model/sam3.yaml`
+1. **SAM 1 prototype** (`segment-anything`, ViT-B, box prompts):
+   147,456 / 93.7M trainable (0.157%, 635x reduction). Proved the mechanism;
+   superseded when the team standardized on SAM 3.
+2. **SAM 3 via HF `transformers`** (separate q_proj/v_proj, planned text
+   prompts): 524,288 / 840.4M (0.062%) verified on the real gated weights.
+   Superseded when the team standardized on the native `sam3` package with an
+   image-only architecture and a trained FPN head, which removed text
+   prompting (and its main risk: unproven zero-shot text prompting on medical
+   concepts) entirely.
+3. **Current**: native stack, fused qkv, `LoRA_qkv`, shared `Sam3MedSeg`.
 
 ## References
 
 - Hu et al., *LoRA: Low-Rank Adaptation of Large Language Models*, 2021.
-- Zhang & Liu, *Customized Segment Anything Model for Medical Image Segmentation*
-  (SAMed), 2023.
-- Kirillov et al., *Segment Anything*, 2023.
-- Ma et al., *Segment Anything in Medical Images* (MedSAM), Nature Comms, 2024.
+- Zhang & Liu, *Customized Segment Anything Model for Medical Image
+  Segmentation* (SAMed), 2023.
+- Kirillov et al., *Segment Anything*, 2023 (SAM 1).
+- SAM 3 release: `github.com/facebookresearch/sam3` /
+  `huggingface.co/facebook/sam3`.
+- Li et al., *Exploring Plain Vision Transformer Backbones for Object
+  Detection* (ViTDet), 2022.
+- Lin et al., *Feature Pyramid Networks for Object Detection* (FPN), 2017.
+- Ma et al., *Segment Anything in Medical Images* (MedSAM), Nature Comms,
+  2024 (loss recipe).
