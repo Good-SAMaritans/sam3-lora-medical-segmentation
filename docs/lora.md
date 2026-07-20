@@ -127,7 +127,7 @@ Notes on the loop:
 |---|---|---|
 | `LoRALayer` | `src/medseg/models/lora.py` | Low-rank adapter for one projection: `B(A(x))·(α/r)` |
 | `LoRA_qkv` | `src/medseg/models/lora.py` | Wraps SAM's fused qkv; adds LoRA to Q & V slices |
-| `inject_lora_into_sam` | `src/medseg/models/sam_lora.py` | Freezes SAM, wraps every encoder block's qkv |
+| `inject_lora_into_sam` | *(removed)* | Froze SAM, wrapped every encoder block's qkv. Lived in `sam_lora.py`, which was folded into `lora.py` (commit `ea56381`); the function itself no longer exists — see §7 for the current gap. |
 | Tests | `tests/test_lora.py` | Shape / zero-at-init / param-count checks |
 | Demo | `notebooks/02_lora.ipynb` | Loads SAM, injects LoRA, prints the param counts above |
 
@@ -141,6 +141,107 @@ Hyperparameters: rank `r = 4`, scaling `α = 4`, encoder dim `d = 768` (ViT-B).
 - [ ] Box-prompt simulation (`mask_to_box`)
 - [ ] Training harness: SAM forward, Dice + BCE loss, train/val loop
 - [ ] Adapter-only save/load; `configs/model/sam_vit_b.yaml`
+
+## 7. SAM 3 plan — CURRENT (supersedes the SAM-1 specifics in §4–6)
+
+> **2026-07-16:** the team standardized on **SAM 3**. Sections above describe the
+> SAM 1 prototype and are kept for the report's "what changed and why" narrative.
+>
+> **2026-07-17 — correction.** The 07-16 note said SAM 3 meant HuggingFace
+> `transformers` with separate `q_proj`/`v_proj`, and that `LoRA_qkv` was therefore
+> obsolete. **That was wrong.** The team uses Meta's own `sam3` package, whose
+> attention is **fused-qkv** (`nn.Linear(dim, 3*dim)`) like SAM 1. So `LoRA_qkv` is
+> the live wrapper and has been restored; the `LinearWithLoRA` /
+> `inject_lora_into_sam3` path is HF-only and does **not** apply to our stack.
+> Everything below written against the HF architecture is marked accordingly.
+
+### How LoRA + SAM 3 + MedSeg data fit together
+
+```mermaid
+flowchart TB
+    subgraph DATA["data pipeline — DONE (src/medseg/data/)"]
+        IMG["Kvasir / BUSI image"]
+        GT["ground-truth binary mask"]
+    end
+    TXT["text prompt — constant per dataset:<br/>'polyp' (Kvasir) / 'lesion' (BUSI)"]
+    PROC["Sam3Processor<br/>resize + normalize image, tokenize text"]
+
+    subgraph SAM3["Sam3Model — 840.4M params, all FROZEN except LoRA"]
+        VE["vision encoder<br/>32 ViT layers, d=1024, RoPE attention<br/>LoRA on q_proj + v_proj of every layer"]
+        TE["text encoder — 24 layers<br/>word → concept embedding"]
+        GE["geometry encoder<br/>(unused in text-prompt plan;<br/>FALLBACK if text prompting fails)"]
+        DETR["DETR encoder + decoder<br/>matches concept against image features,<br/>proposes instances"]
+        MD["mask decoder → mask per instance"]
+    end
+
+    PRED["predicted mask(s)"]
+    LOSS["Dice + BCE loss"]
+
+    IMG --> PROC --> VE
+    TXT --> PROC --> TE
+    VE --> DETR
+    TE --> DETR
+    GE -.-> DETR
+    DETR --> MD --> PRED
+    PRED --> LOSS
+    GT --> LOSS
+    LOSS -. "backprop: gradients flow THROUGH the frozen<br/>decoder/DETR back to the vision encoder,<br/>but only the LoRA A/B matrices update" .-> VE
+
+    classDef trainable fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20;
+    classDef frozen fill:#eceff1,stroke:#90a4ae,color:#37474f;
+    class VE trainable;
+    class TE,GE,DETR,MD frozen;
+```
+
+- **Trainable (green): only the LoRA adapters** inside the vision encoder —
+  `32 layers × 2 projections × 2·r·d = 524,288` params at `r = 4` (**0.062%** of
+  840.9M; verified against the config-built model, exactly matching the paper
+  prediction). Everything else — including the text encoder and the entire
+  detection/masking head — stays frozen.
+- The ground-truth mask is used **only in the loss**; unlike the SAM-1 box-prompt
+  loop (§4), nothing derived from it enters the model. The prompt is a constant
+  string, identical for every image in a dataset.
+- ⚠️ The internal wiring shown (what feeds what between encoders, DETR, and the
+  mask decoder) is inferred from `named_modules()` and the SAM 3 release notes —
+  **verify against a real forward pass once gated weights are available.**
+
+### ⚠️ The unproven assumption this plan rests on
+
+SAM 3's text prompting (Promptable Concept Segmentation) was trained on **natural
+images**. Our plan assumes the frozen text encoder + DETR matcher can do something
+sensible with the concept "polyp" on endoscopy frames and "lesion" on ultrasound —
+vocabulary and imagery far from its training distribution. This matters doubly for
+the LoRA arm: we only adapt vision features; the concept-matching machinery itself
+stays frozen (Sean's full fine-tune can fix it — we can't). If zero-shot returns
+*no detections at all* (rather than merely bad masks), gradients into our adapters
+may be degenerate.
+
+**First action once weights land:** zero-shot sanity check on 5–10 Kvasir + BUSI
+images. Outcomes: (a) rough-but-sane masks → proceed, LoRA sharpens them;
+(b) empty/garbage → fall back to box prompts via the `geometry_encoder`, or rethink
+with the team; (c) in between → try prompt wording ("polyp" / "growth" / "lesion").
+
+### Code map (current)
+
+| Piece | File | What it is |
+|---|---|---|
+| `LoRALayer` | `src/medseg/models/lora.py` | Low-rank adapter for one projection: `B(A(x))·(α/r)` — unchanged since SAM 1 |
+| `LinearWithLoRA` | `src/medseg/models/lora.py` | Frozen original Linear + one LoRALayer; `forward = original(x) + lora(x)` |
+| `inject_lora_into_sam3` | `src/medseg/models/lora.py` | Freeze all of SAM 3, wrap `q_proj`/`v_proj` in all 32 vision-encoder layers |
+| Tests | `tests/test_lora.py` | Shape / zero-at-init / param-count / wrapper-equality checks |
+| Exploration | `notebooks/03_Sam3_explore.ipynb` | Architecture verification + injection param counts |
+
+Hyperparameters: rank `r = 4`, scaling `α = 4`, encoder dim `d = 1024`.
+TODO: make the target set configurable ({q,v} today; {q,k,v,o} ablation planned).
+
+### Status
+
+- [x] `LoRALayer` + `LinearWithLoRA` + tests (4/4 passing)
+- [x] `inject_lora_into_sam3` — verified on config-built SAM 3: 524,288 / 840,900,662 (0.0623%)
+- [ ] HF gated access (requested 2026-07-16) → re-verify on real weights; pin revision with Sean
+- [ ] Zero-shot text-prompt sanity check (the assumption test above)
+- [ ] Training harness: `Sam3Processor` batching, Dice+BCE, train/val loop
+- [ ] Adapter-only save/load; `configs/model/sam3.yaml`
 
 ## References
 
