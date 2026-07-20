@@ -1,0 +1,18 @@
+# small test to validate: SAM3 full finetune on a tiny BUSI subset.
+data:
+  name: busi
+  size: 256
+  img_size: 256 # data layer stays 256; model resizes to 1008 internally
+  normalize: null
+  n_train: 8 # tiny subset
+  batch_size: 1
+  num_workers: 2
+  aug_preset: none # deterministic for test
+model:
+  finetune_mode: full
+  num_classes: 1
+train:
+  epochs: 2
+  backbone_lr: 1.0e-5
+  head_lr: 1.0e-4
+  ckpt_dir: /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_test
