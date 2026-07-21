@@ -14,7 +14,10 @@ def main():
     device = get_device()
     print("device:", device)
 
-    cfg = yaml.safe_load(open("configs/experiment/sam3_lora_busi.yaml"))
+    #config path from the command line, defaulting to the smoke config
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "configs/experiment/sam3_lora_busi.yaml"
+    print("config:", config_path)
+    cfg = yaml.safe_load(open(config_path))
 
     data_cfg = DataConfig.from_dict(cfg["data"])
     loaders = build_dataloaders(data_cfg)
