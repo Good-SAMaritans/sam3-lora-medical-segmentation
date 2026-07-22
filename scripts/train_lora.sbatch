@@ -15,7 +15,7 @@
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH -c 8                               # CPU cores (dataloader workers)
-#SBATCH --gres=gpu:V100:1                  # 1 V100 (32GB); easier to get than A100. A100 = faster.
+#SBATCH --gres=gpu:A100:1                  # A100 (CC 8.0). NOT V100: cu128 torch dropped V100's CC 7.0.
 #SBATCH --mem=32G
 #SBATCH -t 03:00:00                        # walltime (max 8h; our run is ~1-2h)
 #SBATCH -J lora_busi
@@ -27,7 +27,7 @@ nvidia-smi
 
 # --- software ---
 # versions differ by node; confirm with `module spider anaconda` / `module spider cuda`
-module load anaconda3/2022.05.0.1
+module load anaconda3/2023.03              # 2023+ (present on A100 nodes; provides conda)
 module load cuda
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ~/scratch/sam3-cluster     # the env you created in scratch (see docs/cluster.md)
