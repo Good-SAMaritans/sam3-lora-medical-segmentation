@@ -17,4 +17,4 @@ train:
   epochs: 20
   backbone_lr: 1.0e-5
   head_lr: 1.0e-4
-  ckpt_dir: checkpoints/sam3_full_busi_full
+  ckpt_dir: /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_full
