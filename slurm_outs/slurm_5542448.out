@@ -1,0 +1,62 @@
+---------------------------------------
+Begin Slurm Prolog: Jul-27-2026 14:40:13
+Job ID:    5542448
+User ID:   skang411
+Account:   isye
+Job name:  sam3_full
+Partition: ice-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5542448 on atl1-1-03-012-23-0.pace.gatech.edu
+Mon Jul 27 14:40:13 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:1C:00.0 Off |                    0 |
+| N/A   34C    P0             85W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+CondaError: Run 'conda init' before 'conda deactivate'
+
+config: configs/experiment/sam3_full_busi.yaml
+/storage/ice1/4/1/skang411/envs/sam-medseg/lib/python3.12/site-packages/albumentations/augmentations/pixel/transforms.py:39: UserWarning: A NumPy version >=2.0.0 and <2.8.0 is required for this version of SciPy (detected version 1.26.4)
+  from scipy import special
+device: cuda
+config: configs/experiment/sam3_full_busi.yaml
+splits: {'train': 8, 'val': 64, 'test': 131}
+/storage/ice1/4/1/skang411/sam3/sam3/model_builder.py:8: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+/storage/ice1/4/1/skang411/envs/sam-medseg/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+parameters: 454,581,633 trainable / 454,581,633 total (100.0000%)
+epoch 1: train_loss=1.2893  val_dice=0.5033  val_nsd=0.0567
+  saved /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_test/best.pt (dice=0.5033)
+epoch 2: train_loss=0.7517  val_dice=0.5939  val_nsd=0.0735
+  saved /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_test/best.pt (dice=0.5939)
+complete: best_val_dice=0.5939  peak_vram=9.4GB
+done
+---------------------------------------
+Begin Slurm Epilog: Jul-27-2026 14:43:11
+Job ID:        5542448
+User ID:       skang411
+Account:       isye
+Job name:      sam3_full
+Resources:     cpu=8,gres/gpu:h100=1,mem=32G,node=1
+Rsrc Used:     cput=00:23:44,vmem=0,walltime=00:02:58,mem=8761300K,energy_used=0
+Partition:     ice-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-012-23-0
+---------------------------------------
