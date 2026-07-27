@@ -57,13 +57,18 @@ class Trainer:
     @torch.no_grad()
     def validate(self):
         self.model.eval()
-        dices, nsds = [], []
+        # weight each batch by its image count: dice_score/nsd return per-batch
+        # means, and the val loader's last batch can be smaller than the rest —
+        # an unweighted mean of batch means would give those images outsized weight
+        dice_sum, nsd_sum, n_total = 0.0, 0.0, 0
         for batch in self.loaders["val"]:
             _, logits, mask = self._step_batch(batch, train=False)
             pred = torch.sigmoid(logits)
-            dices.append(dice_score(pred, mask))
-            nsds.append(nsd(pred, mask, tol=2))
-        return sum(dices) / max(1, len(dices)), sum(nsds) / max(1, len(nsds))
+            n = mask.shape[0]
+            dice_sum += dice_score(pred, mask) * n
+            nsd_sum += nsd(pred, mask, tol=2) * n
+            n_total += n
+        return dice_sum / max(1, n_total), nsd_sum / max(1, n_total)
 
     def fit(self, epochs: int):
         for ep in range(1, epochs + 1):
