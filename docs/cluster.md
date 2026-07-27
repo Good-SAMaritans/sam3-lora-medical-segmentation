@@ -69,12 +69,14 @@ so a job that hits the walltime still leaves a usable best-so-far model.
 
 ## Notes
 
-- **GPU choice:** the sbatch requests a V100 (32 GB, schedules faster). Swap to
-  `--gres=gpu:A100:1` for speed if one is free. The model only needs ~9 GB.
+- **GPU choice:** the sbatch requests an H100 (`--gres=gpu:H100:1`) — team standard
+  as of 2026-07-27 (a BUSI full run is ~36 min on H100 vs ~80 min on A100). Do NOT
+  use V100s: the cu128 torch build dropped their compute capability. The model only
+  needs ~9 GB, so any H100/A100 has plenty of memory.
 - **Limits:** max 8 h walltime and 16 GPU-hours per job. This run is ~1-2 h.
 - **Shared storage:** `/storage/ice-shared/cs7643/shared-group-project-data`
   (50 GB/team) is a good place to stage the SAM3 weights and datasets once so the
   team does not each re-download. Name the folder after the team.
-- **Env per node type:** anaconda/cuda versions differ between V100 and A100 nodes.
+- **Env per node type:** anaconda/cuda versions can differ between GPU node types.
   If activation misbehaves on a new node, `module spider anaconda` / `module spider
   cuda` and adjust, or make a second env for that node type.

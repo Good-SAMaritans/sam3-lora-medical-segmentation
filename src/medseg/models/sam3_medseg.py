@@ -22,11 +22,13 @@ SAM3_MEAN = 0.5
 SAM3_STD = 0.5
 
 class Sam3MedSeg(nn.Module):
-    def __init__(self, finetune_mode: str = "full", num_classes: int = 1):
+    def __init__(self, finetune_mode: str = "full", num_classes: int = 1, lora_r: int = 4, lora_alpha: int = 4):
         super().__init__()
         self.finetune_mode = finetune_mode
         self.backbone = Sam3Backbone()
         self.head = FpnSegHead(in_channels=self.backbone.out_channels, num_classes=num_classes, out_size=SAM3_SIZE)
+        self.lora_r = lora_r
+        self.lora_alpha = lora_alpha
         self._apply_finetune_mode(finetune_mode)
 
     # --- input adapter (decoupled from shared data layer) ---
@@ -56,8 +58,8 @@ class Sam3MedSeg(nn.Module):
             for block in self.backbone.backbone.vision_backbone.trunk.blocks :
                 qkv = block.attn.qkv #1024 , read it
                 dim = qkv.in_features
-                lora_q = LoRALayer( dim, dim, r=4, alpha=4)
-                lora_v = LoRALayer(dim, dim,  r=4, alpha=4)
+                lora_q = LoRALayer( dim, dim, r=self.lora_r, alpha=self.lora_alpha)
+                lora_v = LoRALayer(dim, dim,  r=self.lora_r, alpha=self.lora_alpha)
                 block.attn.qkv = LoRA_qkv(qkv, lora_q, lora_v)
             
         else:
