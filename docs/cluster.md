@@ -1,7 +1,7 @@
 # Running on PACE-ICE
 
 How to run the SAM3 training on the ICE cluster (CUDA GPUs). Batch jobs go through
-SLURM; the batch script is [scripts/train_lora.sbatch](../scripts/train_lora.sbatch).
+SLURM; the batch script is [scripts/slrum/train_lora.sbatch](../scripts/slurm/train_lora.sbatch).
 
 ## The one storage rule that matters
 
@@ -57,7 +57,7 @@ hf auth login                             # paste a read token
 ```bash
 cd ~/scratch/group_project
 mkdir -p slurm_outs
-sbatch scripts/train_lora.sbatch          # queues the job, prints a job id
+sbatch scripts/slurm/train_lora.sbatch          # queues the job, prints a job id
 squeue -u $USER                           # watch it (PD = pending, R = running)
 tail -f slurm_outs/slurm_<jobid>.out      # live output once it starts
 scancel <jobid>                           # cancel if needed
