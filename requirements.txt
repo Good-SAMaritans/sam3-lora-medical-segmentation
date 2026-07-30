@@ -9,6 +9,7 @@ Pillow>=10.0               # PIL image handling
 PyYAML>=6.0                # DataConfig.from_yaml
 medsegbench               # dataset source (MedSegBench .npz + registry)
 matplotlib>=3.7
+segmentation-models-pytorch>=0.5  # UNet baseline arm (models/unet.py)
 
 # Tests
 pytest>=7.4 # incase we want to test things
