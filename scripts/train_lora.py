@@ -26,11 +26,14 @@ def main():
     model = Sam3MedSeg(**cfg["model"])
     print("trainable params:", sum(p.numel() for p in model.trainable_parameters()) / 1e6, "M")
 
+    #num_classes selects the loss: 1 -> BceDiceLoss, >1 -> CeDiceLoss (see engine/losses.build_loss).
+    #Without it the Trainer default of 1 would train a multi-class run against a binary loss.
     trainer = Trainer(model, loaders,
                       ckpt_dir=cfg["train"]["ckpt_dir"],
                       backbone_lr=cfg["train"]["backbone_lr"],
                       head_lr=cfg["train"]["head_lr"],
-                      device=device)
+                      device=device,
+                      num_classes=cfg["model"].get("num_classes", 1))
 
     if device == "cuda":
         torch.cuda.reset_peak_memory_stats()
