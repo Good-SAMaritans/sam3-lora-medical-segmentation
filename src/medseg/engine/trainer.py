@@ -9,19 +9,20 @@ import os
 import torch
 from torch.optim import AdamW
 
-from .losses import BceDiceLoss
-from .metrics import dice_score, nsd
+from .losses import build_loss
+from .metrics import mean_score, resize_mask, seg_scores
 
 class Trainer:
     def __init__(self, model, loaders: dict, ckpt_dir: str,
                  backbone_lr: float = 1e-5, head_lr: float = 1e-4,
-                 weight_decay: float = 0.01, device: str = "cuda"):
+                 weight_decay: float = 0.01, device: str = "cuda",
+                 num_classes: int = 1):
         self.model = model.to(device)
         self.loaders = loaders
         self.device = device
         self.ckpt_dir = ckpt_dir
         os.makedirs(ckpt_dir, exist_ok=True)
-        self.loss_fn = BceDiceLoss()
+        self.loss_fn = build_loss(num_classes)
         # discriminative LR: separate param groups for backbone vs head
         bb = [p for p in self.model.backbone.parameters() if p.requires_grad]
         hd = [p for p in self.model.head.parameters() if p.requires_grad]
@@ -35,10 +36,10 @@ class Trainer:
 
     def _step_batch(self, batch, train: bool):
         img = batch["image"].to(self.device)
-        mask = batch["mask"].to(self.device) # (B,1,256,256) float {0,1}
-        logits = self.model(img) # (B,1,1008,1008)
+        mask = batch["mask"].to(self.device) # (B,1,256,256) float {0,1}, or (B,256,256) long
+        logits = self.model(img) # (B,C,1008,1008)
         # resize to match logits
-        mask = torch.nn.functional.interpolate(mask, size=logits.shape[-2:], mode="nearest")
+        mask = resize_mask(mask, logits.shape[-2:])
         loss = self.loss_fn(logits, mask)
         if train:
             self.opt.zero_grad()
@@ -57,18 +58,13 @@ class Trainer:
     @torch.no_grad()
     def validate(self):
         self.model.eval()
-        # weight each batch by its image count: dice_score/nsd return per-batch
-        # means, and the val loader's last batch can be smaller than the rest —
-        # an unweighted mean of batch means would give those images outsized weight
-        dice_sum, nsd_sum, n_total = 0.0, 0.0, 0
+        dices, nsds = [], []
         for batch in self.loaders["val"]:
             _, logits, mask = self._step_batch(batch, train=False)
-            pred = torch.sigmoid(logits)
-            n = mask.shape[0]
-            dice_sum += dice_score(pred, mask) * n
-            nsd_sum += nsd(pred, mask, tol=2) * n
-            n_total += n
-        return dice_sum / max(1, n_total), nsd_sum / max(1, n_total)
+            dsc, nsd_v = seg_scores(logits, mask, tol=2)
+            dices.append(dsc)
+            nsds.append(nsd_v)
+        return mean_score(dices), mean_score(nsds)
 
     def fit(self, epochs: int):
         for ep in range(1, epochs + 1):

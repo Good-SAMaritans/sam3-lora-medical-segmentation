@@ -8,7 +8,7 @@ dependencies:
   - python=3.11
   - pip
   - pip:
-      - --extra-index-url https://download.pytorch.org/whl/cu128 # we may need to revisit this one for the VM 
+      - --extra-index-url https://download.pytorch.org/whl/cu128 # cu128 wheels ship sm_120; required for Blackwell (RTX 50xx)
       - torch==2.11.0+cu128
       - torchvision==0.26.0+cu128
       - -r requirements.txt

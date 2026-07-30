@@ -1,0 +1,30 @@
+name: unet_busi512
+
+base:
+  data:
+    name: busi
+    size: 512
+    img_size: 512
+    normalize: imagenet     # held fixed so encoder_weights is the only thing that varies
+    n_train: null
+    batch_size: 8
+    num_workers: 4
+    aug_preset: medseg_default
+  model:
+    encoder_name: resnet34
+    encoder_weights: imagenet
+    in_channels: 3
+    num_classes: 1
+    finetune_mode: full
+  train:
+    epochs: 60
+    backbone_lr: 1.0e-4
+    head_lr: 1.0e-3
+    weight_decay: 0.01
+    out_dir: results
+    keep_checkpoint: false
+
+grid:
+  model.encoder_name: [resnet34, resnet50, efficientnet-b0, mit_b0]
+  model.encoder_weights: [imagenet, null]
+  data.aug_preset: [medseg_default, none]
