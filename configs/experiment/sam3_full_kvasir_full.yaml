@@ -1,0 +1,20 @@
+# Full SAM 3 fine-tuning on the complete Kvasir training split.
+data:
+  name: kvasir
+  size: 256
+  img_size: 256
+  normalize: null
+  n_train: null
+  batch_size: 1
+  num_workers: 2
+  aug_preset: medseg_default
+
+model:
+  finetune_mode: full
+  num_classes: 1
+
+train:
+  epochs: 20
+  backbone_lr: 1.0e-5
+  head_lr: 1.0e-4
+  ckpt_dir: /storage/ice1/4/1/skang411/checkpoints/sam3_full_kvasir_full
