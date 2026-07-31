@@ -1,0 +1,19 @@
+# Test: SAM3 FULL fine-tuning on MoNuSAC (multiclass). 8 imgs, 2 epochs.
+data:
+  name: monusac
+  size: 512
+  img_size: 512
+  normalize: null
+  n_train: 8
+  batch_size: 1
+  num_workers: 2
+  aug_preset: medseg_default
+model:
+  finetune_mode: full
+  num_classes: 5
+train:
+  epochs: 2
+  backbone_lr: 1.0e-5
+  head_lr: 1.0e-4
+  ignore_index: 5
+  ckpt_dir: /storage/ice1/4/1/skang411/checkpoints/sam3_full_monusac_smoke

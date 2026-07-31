@@ -1,8 +1,8 @@
 # Full SAM 3 fine-tuning on the complete Kvasir training split.
 data:
   name: kvasir
-  size: 256
-  img_size: 256
+  size: 512
+  img_size: 512
   normalize: null
   n_train: null
   batch_size: 1
