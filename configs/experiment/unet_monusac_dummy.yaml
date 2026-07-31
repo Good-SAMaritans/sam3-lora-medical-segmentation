@@ -1,0 +1,41 @@
+
+# Labels: 0 background, 1 Epithelial, 2 Lymphocyte, 3 Macrophage, 4 Neutrophil,
+# 5 Ambiguous. 
+
+# We train a 5-class model (0-4). 
+
+# The Ambiguous class has 0 train and 0 val images but appears in test 
+# is treated as a don't care region: ignore_index drops those pixels from the test metric (check out  engine/metrics.py) so they count as neither hit nor 
+# false positive for any real class
+name: unet_monusac512
+
+base:
+  data:
+    name: monusac
+    size: 512
+    img_size: 512
+    download: false          
+    normalize: imagenet
+    n_train: null
+    batch_size: 8
+    num_workers: 4
+    aug_preset: medseg_default
+  model:
+    encoder_name: resnet34
+    encoder_weights: imagenet
+    in_channels: 3
+    num_classes: 5
+    finetune_mode: full
+  train:
+    epochs: 100              
+    ignore_index: 5          # Ambiguous: don't care at eval, absent from train/val
+    backbone_lr: 1.0e-4
+    head_lr: 1.0e-3
+    weight_decay: 0.01
+    out_dir: results
+    keep_checkpoint: false
+
+grid:
+  model.encoder_name: [resnet34, resnet50, efficientnet-b0, mit_b0]
+  model.encoder_weights: [imagenet, null]
+  data.aug_preset: [medseg_default, none]

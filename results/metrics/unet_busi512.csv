@@ -1,0 +1,17 @@
+run,dataset,img_size,encoder,pretrained,batch_size,aug,backbone_lr,head_lr,epochs,val_dice,test_dice,test_nsd,minutes
+unet_busi512_enc-resnet34_pre-imagenet_aug-medseg_default,busi,512,resnet34,imagenet,8,medseg_default,0.0001,0.001,60,0.7341,0.7566,0.3764,5.3
+unet_busi512_enc-resnet34_pre-imagenet_aug-none,busi,512,resnet34,imagenet,8,none,0.0001,0.001,60,0.7022,0.7071,0.326,5.2
+unet_busi512_enc-resnet34_pre-none_aug-medseg_default,busi,512,resnet34,none,8,medseg_default,0.0001,0.001,60,0.7517,0.7479,0.3552,5.3
+unet_busi512_enc-resnet34_pre-none_aug-none,busi,512,resnet34,none,8,none,0.0001,0.001,60,0.6885,0.6888,0.3104,5.2
+unet_busi512_enc-resnet50_pre-imagenet_aug-medseg_default,busi,512,resnet50,imagenet,8,medseg_default,0.0001,0.001,60,0.7173,0.7364,0.3637,7.6
+unet_busi512_enc-resnet50_pre-imagenet_aug-none,busi,512,resnet50,imagenet,8,none,0.0001,0.001,60,0.6823,0.687,0.3494,7.5
+unet_busi512_enc-resnet50_pre-none_aug-medseg_default,busi,512,resnet50,none,8,medseg_default,0.0001,0.001,60,0.6779,0.6847,0.3099,7.6
+unet_busi512_enc-resnet50_pre-none_aug-none,busi,512,resnet50,none,8,none,0.0001,0.001,60,0.6501,0.6653,0.2702,7.5
+unet_busi512_enc-efficientnet-b0_pre-imagenet_aug-medseg_default,busi,512,efficientnet-b0,imagenet,8,medseg_default,0.0001,0.001,60,0.7387,0.7475,0.3788,5.3
+unet_busi512_enc-efficientnet-b0_pre-imagenet_aug-none,busi,512,efficientnet-b0,imagenet,8,none,0.0001,0.001,60,0.7086,0.7298,0.3551,5.2
+unet_busi512_enc-efficientnet-b0_pre-none_aug-medseg_default,busi,512,efficientnet-b0,none,8,medseg_default,0.0001,0.001,60,0.7461,0.7343,0.3247,5.3
+unet_busi512_enc-efficientnet-b0_pre-none_aug-none,busi,512,efficientnet-b0,none,8,none,0.0001,0.001,60,0.5712,0.5749,0.1957,5.2
+unet_busi512_enc-mit_b0_pre-imagenet_aug-medseg_default,busi,512,mit_b0,imagenet,8,medseg_default,0.0001,0.001,60,0.7752,0.7772,0.3939,4.7
+unet_busi512_enc-mit_b0_pre-imagenet_aug-none,busi,512,mit_b0,imagenet,8,none,0.0001,0.001,60,0.762,0.755,0.3702,4.5
+unet_busi512_enc-mit_b0_pre-none_aug-medseg_default,busi,512,mit_b0,none,8,medseg_default,0.0001,0.001,60,0.7478,0.73,0.338,4.6
+unet_busi512_enc-mit_b0_pre-none_aug-none,busi,512,mit_b0,none,8,none,0.0001,0.001,60,0.6124,0.6045,0.2516,4.5

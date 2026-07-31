@@ -10,6 +10,7 @@ __pycache__/
 .eggs/
 build/
 dist/
+figures/
 
 # --- virtual environments ---
 .venv/
