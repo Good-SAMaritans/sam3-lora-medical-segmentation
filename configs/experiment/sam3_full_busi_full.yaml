@@ -1,8 +1,8 @@
 # Full SAM 3 fine-tuning on the complete BUSI training split.
 data:
   name: busi
-  size: 512
-  img_size: 512
+  size: 256
+  img_size: 256
   normalize: null
   n_train: null
   batch_size: 1

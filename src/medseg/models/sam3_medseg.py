@@ -2,7 +2,7 @@
 sam3_medseg.py - SAM 3 medical segmentation model.
 
 Pipeline: (B,3,256,256) in [0,1]  -> resize 1008 + normalize(0.5)  ->
-SAM 3 vision backbone (bf16 autocast) -> FpnSegHead -> (B,C,512,512) logits.
+SAM 3 vision backbone (bf16 autocast) -> FpnSegHead -> (B,1,1008,1008) logits.
 
 The input adapter (resize + normalize) lives HERE on purpose, 
 so this arm does not depend on the shared data layer being changed to 1008 yet.
@@ -17,8 +17,7 @@ from .sam3_backbone import Sam3Backbone
 from .seg_head import FpnSegHead
 from .lora import LoRALayer, LoRA_qkv
 
-SAM3_INPUT_SIZE = 1008
-SAM3_OUT_SIZE = 512  # head output layer - matches U-Net for fair scoring
+SAM3_SIZE = 1008
 SAM3_MEAN = 0.5
 SAM3_STD = 0.5
 
@@ -27,26 +26,15 @@ class Sam3MedSeg(nn.Module):
         super().__init__()
         self.finetune_mode = finetune_mode
         self.backbone = Sam3Backbone()
-        self.head = FpnSegHead(in_channels=self.backbone.out_channels, num_classes=num_classes, out_size=SAM3_OUT_SIZE)
+        self.head = FpnSegHead(in_channels=self.backbone.out_channels, num_classes=num_classes, out_size=SAM3_SIZE)
         self._apply_finetune_mode(finetune_mode)
 
     # --- input adapter (decoupled from shared data layer) ---
     def _prep_input(self, image: torch.Tensor) -> torch.Tensor:
         # image: (B,3,H,W) in [0,1]. Resize to 1008, normalize with mean/std 0.5.
-        if image.shape[-2:] != (SAM3_INPUT_SIZE, SAM3_INPUT_SIZE):
-            image = F.interpolate(image, size=(SAM3_INPUT_SIZE, SAM3_INPUT_SIZE), mode="bilinear", align_corners=False)
+        if image.shape[-2:] != (SAM3_SIZE, SAM3_SIZE):
+            image = F.interpolate(image, size=(SAM3_SIZE, SAM3_SIZE), mode="bilinear", align_corners=False)
         return (image - SAM3_MEAN) / SAM3_STD
-
-    def _unfreeze_neck(self):
-        # neck = vision_backbone params NOT in the ViTDet trunk
-        vb = self.backbone.backbone.vision_backbone
-        trunk_ids = {id(p) for p in vb.trunk.parameters()}
-        n = 0
-        for p in vb.parameters():
-            if id(p) not in trunk_ids:
-                p.requires_grad = True
-                n += 1
-        return n
 
     # finetune strategy dispatch
     def _apply_finetune_mode(self, mode: str):
@@ -58,7 +46,6 @@ class Sam3MedSeg(nn.Module):
                 p.requires_grad = False
             for p in self.head.parameters():
                 p.requires_grad = True
-            self._unfreeze_neck() #after freezing backbone + unfreezing head, add `self._unfreeze_neck()`.
         elif mode == "lora":
             # freeze ALL backbone params. inject LoRA into each fused qkv,
             # head says trainable 
@@ -72,7 +59,6 @@ class Sam3MedSeg(nn.Module):
                 lora_q = LoRALayer( dim, dim, r=4, alpha=4)
                 lora_v = LoRALayer(dim, dim,  r=4, alpha=4)
                 block.attn.qkv = LoRA_qkv(qkv, lora_q, lora_v)
-            self._unfreeze_neck() #after freezing backbone + injecting LoRA into `trunk...blocks[*].attn.qkv`, add `self._unfreeze_neck()`.
             
         else:
             raise ValueError(f"unknown finetune_mode: {mode}")
