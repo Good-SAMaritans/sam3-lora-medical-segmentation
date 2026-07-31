@@ -81,7 +81,6 @@ def main() -> None:
         backbone_lr=config["train"]["backbone_lr"],
         head_lr=config["train"]["head_lr"],
         device=device,
-        num_classes=config["model"].get("num_classes", 1),
     )
 
     if device == "cuda":
