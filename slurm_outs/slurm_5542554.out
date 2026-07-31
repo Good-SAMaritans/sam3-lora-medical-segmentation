@@ -1,0 +1,78 @@
+---------------------------------------
+Begin Slurm Prolog: Jul-27-2026 15:44:28
+Job ID:    5542554
+User ID:   skang411
+Account:   isye
+Job name:  sam3_full
+Partition: ice-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5542554 on atl1-1-03-012-18-0.pace.gatech.edu
+Mon Jul 27 15:44:28 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:0A:00.0 Off |                    0 |
+| N/A   38C    P0             83W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+config: configs/experiment/sam3_full_busi_full.yaml
+/storage/ice1/4/1/skang411/envs/sam-medseg/lib/python3.12/site-packages/albumentations/augmentations/pixel/transforms.py:39: UserWarning: A NumPy version >=2.0.0 and <2.8.0 is required for this version of SciPy (detected version 1.26.4)
+  from scipy import special
+device: cuda
+config: configs/experiment/sam3_full_busi_full.yaml
+splits: {'train': 452, 'val': 64, 'test': 131}
+/storage/ice1/4/1/skang411/sam3/sam3/model_builder.py:8: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+/storage/ice1/4/1/skang411/envs/sam-medseg/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+parameters: 454,581,633 trainable / 454,581,633 total (100.0000%)
+epoch 1: train_loss=0.6319  val_dice=0.7470  val_nsd=0.2157
+  saved /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_full/best.pt (dice=0.7470)
+epoch 2: train_loss=0.4456  val_dice=0.7773  val_nsd=0.2156
+  saved /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_full/best.pt (dice=0.7773)
+epoch 3: train_loss=0.3721  val_dice=0.7739  val_nsd=0.2095
+epoch 4: train_loss=0.3419  val_dice=0.7232  val_nsd=0.2217
+epoch 5: train_loss=0.3029  val_dice=0.7369  val_nsd=0.1333
+epoch 6: train_loss=0.2784  val_dice=0.7554  val_nsd=0.2173
+epoch 7: train_loss=0.2989  val_dice=0.7327  val_nsd=0.1777
+epoch 8: train_loss=0.2664  val_dice=0.7633  val_nsd=0.2225
+epoch 9: train_loss=0.2641  val_dice=0.7885  val_nsd=0.2257
+  saved /storage/ice1/4/1/skang411/checkpoints/sam3_full_busi_full/best.pt (dice=0.7885)
+epoch 10: train_loss=0.2204  val_dice=0.7791  val_nsd=0.2247
+epoch 11: train_loss=0.2223  val_dice=0.7846  val_nsd=0.2277
+epoch 12: train_loss=0.2277  val_dice=0.7667  val_nsd=0.2313
+epoch 13: train_loss=0.2243  val_dice=0.7602  val_nsd=0.2210
+epoch 14: train_loss=0.2164  val_dice=0.7225  val_nsd=0.1704
+epoch 15: train_loss=0.2041  val_dice=0.7851  val_nsd=0.2296
+epoch 16: train_loss=0.1738  val_dice=0.7822  val_nsd=0.2396
+epoch 17: train_loss=0.1757  val_dice=0.7718  val_nsd=0.2102
+epoch 18: train_loss=0.2141  val_dice=0.7320  val_nsd=0.2195
+epoch 19: train_loss=0.2283  val_dice=0.7632  val_nsd=0.2153
+epoch 20: train_loss=0.1894  val_dice=0.7660  val_nsd=0.2258
+complete: best_val_dice=0.7885  peak_vram=9.4GB
+done
+---------------------------------------
+Begin Slurm Epilog: Jul-27-2026 16:22:46
+Job ID:        5542554
+User ID:       skang411
+Account:       isye
+Job name:      sam3_full
+Resources:     cpu=8,gres/gpu:h100=1,mem=32G,node=1
+Rsrc Used:     cput=05:06:16,vmem=0,walltime=00:38:17,mem=8734532K,energy_used=0
+Partition:     ice-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-012-18-0
+---------------------------------------
