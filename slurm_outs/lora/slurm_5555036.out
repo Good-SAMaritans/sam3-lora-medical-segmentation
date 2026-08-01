@@ -1,0 +1,84 @@
+---------------------------------------
+Begin Slurm Prolog: Jul-31-2026 23:28:32
+Job ID:    5555036
+User ID:   nsulay3
+Account:   coc
+Job name:  hp_lr3e-5
+Partition: ice-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5555036 on atl1-1-03-013-3-0.pace.gatech.edu
+Fri Jul 31 23:28:32 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000001:1C:00.0 Off |                    0 |
+| N/A   40C    P0            104W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+config: configs/experiment/lora/hp/sam3_lora_busi_lr3e-5.yaml
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+device: cuda
+config: configs/experiment/lora/hp/sam3_lora_busi_lr3e-5.yaml
+splits: {'train': 452, 'val': 64, 'test': 131}
+trainable params: 1.066113 M
+resolution: img_size=512  backbone_in=1008  head_out=512
+epoch 1: train_loss=0.7678  val_dice=0.6214  val_nsd=0.1813
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.6214)
+epoch 2: train_loss=0.5949  val_dice=0.6797  val_nsd=0.2206
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.6797)
+epoch 3: train_loss=0.5102  val_dice=0.6895  val_nsd=0.3214
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.6895)
+epoch 4: train_loss=0.4649  val_dice=0.7137  val_nsd=0.3369
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7137)
+epoch 5: train_loss=0.4076  val_dice=0.7320  val_nsd=0.3232
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7320)
+epoch 6: train_loss=0.4119  val_dice=0.7424  val_nsd=0.3444
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7424)
+epoch 7: train_loss=0.3840  val_dice=0.7455  val_nsd=0.3382
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7455)
+epoch 8: train_loss=0.3582  val_dice=0.7196  val_nsd=0.3356
+epoch 9: train_loss=0.3703  val_dice=0.7249  val_nsd=0.3464
+epoch 10: train_loss=0.3547  val_dice=0.7353  val_nsd=0.3416
+epoch 11: train_loss=0.3511  val_dice=0.7424  val_nsd=0.3400
+epoch 12: train_loss=0.3329  val_dice=0.7416  val_nsd=0.3568
+epoch 13: train_loss=0.3276  val_dice=0.7492  val_nsd=0.3487
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7492)
+epoch 14: train_loss=0.3422  val_dice=0.7482  val_nsd=0.3553
+epoch 15: train_loss=0.3298  val_dice=0.7561  val_nsd=0.3545
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7561)
+epoch 16: train_loss=0.2969  val_dice=0.7496  val_nsd=0.3547
+epoch 17: train_loss=0.3157  val_dice=0.7565  val_nsd=0.3563
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7565)
+epoch 18: train_loss=0.3077  val_dice=0.7621  val_nsd=0.3535
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7621)
+epoch 19: train_loss=0.3010  val_dice=0.7649  val_nsd=0.3619
+  saved checkpoints/sam3_lora_busi_lr3e-5_512/best.pt (dice=0.7649)
+epoch 20: train_loss=0.2820  val_dice=0.7577  val_nsd=0.3650
+SMOKE OK — best_dice=0.7649  peak_VRAM=3.5GB
+done
+---------------------------------------
+Begin Slurm Epilog: Aug-01-2026 00:04:21
+Job ID:        5555036
+User ID:       nsulay3
+Account:       coc
+Job name:      hp_lr3e-5
+Resources:     cpu=8,gres/gpu:h100=1,mem=32G,node=1
+Rsrc Used:     cput=04:46:32,vmem=0,walltime=00:35:49,mem=7891264K,energy_used=0
+Partition:     ice-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-013-3-0
+---------------------------------------

@@ -7,9 +7,9 @@
 # and the relative checkpoints/ dir then also lives in scratch.
 #
 # Submit from the repo root (on a login node is fine):
-#   mkdir -p slurm_outs
+#   mkdir -p slurm_outs/lora
 #   sbatch scripts/train_lora.sbatch
-# Watch:  squeue -u $USER    then    tail -f slurm_outs/slurm_<jobid>.out
+# Watch:  squeue -u $USER    then    tail -f slurm_outs/lora/slurm_<jobid>.out
 # Cancel: scancel <jobid>
 
 #SBATCH -N 1
@@ -19,7 +19,8 @@
 #SBATCH --mem=32G
 #SBATCH -t 03:00:00                        # walltime (max 8h; our run is ~1-2h)
 #SBATCH -J lora_busi
-#SBATCH -o slurm_outs/slurm_%j.out         # stdout+stderr (%j = job id); mkdir this first
+#SBATCH -o slurm_outs/lora/slurm_%j.out    # stdout+stderr (%j = job id). Slurm does NOT create
+                                           # this dir -- if it is missing the job dies with no log.
 
 set -e
 echo "job $SLURM_JOB_ID on $(hostname)"
@@ -40,9 +41,9 @@ export HF_HOME=~/scratch/hf
 cd "$SLURM_SUBMIT_DIR"
 
 # config path can be passed to sbatch (e.g. a SLURM test with the smoke config):
-#   sbatch scripts/train_lora.sbatch configs/experiment/sam3_lora_busi.yaml
-# defaults to the full run if none given
-CONFIG="${1:-configs/experiment/sam3_lora_busi_full.yaml}"
+#   sbatch scripts/train_lora.sbatch configs/experiment/lora/smoke/sam3_lora_busi.yaml
+# defaults to the baseline full run if none given; sweep points live in lora/hp/
+CONFIG="${1:-configs/experiment/lora/baseline/sam3_lora_busi_full.yaml}"
 echo "config: $CONFIG"
 python scripts/train_lora.py "$CONFIG"
 echo "done"

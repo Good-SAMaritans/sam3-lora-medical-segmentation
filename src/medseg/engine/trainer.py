@@ -61,7 +61,9 @@ class Trainer:
         dices, nsds = [], []
         for batch in self.loaders["val"]:
             _, logits, mask = self._step_batch(batch, train=False)
-            dsc, nsd_v = seg_scores(logits, mask, tol=2)
+            # NSD tol scales with output resolution (2px @512, 4px @1008) so every arm forgives the same real displacement. Matches eval_model.default_tol.
+            tol = max(1, round(2 * logits.shape[-1] / 512))
+            dsc, nsd_v = seg_scores(logits, mask, tol=tol)
             dices.append(dsc)
             nsds.append(nsd_v)
         return mean_score(dices), mean_score(nsds)

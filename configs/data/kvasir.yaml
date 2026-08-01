@@ -2,7 +2,7 @@
 
 # dataset identity / acquisition
 name: kvasir              # -> KvasirMSBench
-size: 256                 # source resolution: 128 | 256 | 512
+size: 512                 # source resolution: 128 | 256 | 512. 512 = team standard (matches U-Net/YOLO arms)
 category: null            # Kvasir has no sub-categories
 download: true            # fetch .npz from Zenodo into `root` if missing
 root: ~/.medsegbench
@@ -13,7 +13,7 @@ subset_seed: 0
 
 # preprocessing
 force_rgb: true           # no-op here (already RGB); load-bearing for grayscale sets
-img_size: 256             # target square size after resize/pad
+img_size: 512             # target square size after resize/pad
 normalize: null           # null (/255) | imagenet
 
 # augmentation (shared across arms)

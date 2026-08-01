@@ -1,0 +1,58 @@
+% ============================================================================
+%  Main results table - 4 methods x 3 datasets x (Dice, NSD)
+%  No booktabs needed: tabular* + \hline/\cline, matching the existing report style.
+%
+%  ALL numbers are TEST split.
+%    SAM 3 (LoRA): results/metrics/lora_eval.csv, regenerated 2026-08-01 after the
+%      seg head moved 1008 -> 512 (eval_size=512, tol=2). The superseded 1008-raster
+%      run was deleted; if the older figures resurface, check eval_size before reusing.
+%    SAM 3 (full): still the pre-2026-07-31 eval (eval_size=1008, tol=4) -- CHECK before
+%      submitting; the caption claims every arm evaluates at 512.
+%    U-Net: results/metrics/unet_*512.csv (native 512, tol=2).
+%  tol scales with output resolution, so 1008/tol=4 and 512/tol=2 forgive the same real
+%  boundary displacement and NSD stays comparable; Dice is likewise near-invariant.
+% ============================================================================
+
+\begin{table*}[t]
+\centering
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrcccccc@{}}
+\hline
+ & & \multicolumn{2}{c}{BUSI} & \multicolumn{2}{c}{Kvasir} & \multicolumn{2}{c}{MoNuSAC} \\
+\cline{3-8}
+Method & Trainable params & Dice & NSD & Dice & NSD & Dice & NSD \\
+\hline
+U-Net (ResNet-34)  & TODO     & 0.757 & 0.376 & 0.891 & 0.620 & TODO  & TODO  \\
+YOLO-seg           & 10.07 M  & TODO  & TODO  & TODO  & TODO  & TODO  & TODO  \\
+SAM 3 (LoRA)       & 1.07 M   & 0.785 & 0.401 & 0.916 & 0.659 & 0.759 & 0.634 \\
+SAM 3 (full)       & 455.1 M  & TODO  & TODO  & TODO  & TODO  & TODO  & TODO  \\
+\hline
+\end{tabular*}
+\caption{Test-set segmentation accuracy and trainable parameter count per method.
+Dice measures region overlap between the predicted and true masks, while NSD
+measures how closely their boundaries agree, counting boundary pixels that fall
+within a 2\,px tolerance on a 512\,px raster. A method can score well on Dice but
+poorly on NSD if it finds the right region with imprecise outlines. MoNuSAC scores
+are macro-averaged over the four nucleus classes, with the Ambiguous class excluded
+from evaluation. All arms train and evaluate at 512$\times$512.}
+\label{tab:main}
+\end{table*}
+
+
+% ============================================================================
+%  Dataset characteristics
+% ============================================================================
+
+\begin{table}[t]
+\centering
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lccl@{}}
+\hline
+Dataset & Train/Val/Test & Modality & Task \\
+\hline
+BUSI    & 452 / 64 / 131  & Grayscale ultrasound & Binary lesion \\
+Kvasir  & 700 / 100 / 200 & RGB endoscopy        & Binary polyp \\
+MoNuSAC & 188 / 21 / 101  & RGB H\&E histology   & 4-class nuclei \\
+\hline
+\end{tabular*}
+\caption{The three datasets. All arms train and evaluate at 512$\times$512.}
+\label{tab:datasets}
+\end{table}

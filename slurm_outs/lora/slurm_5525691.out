@@ -1,0 +1,55 @@
+---------------------------------------
+Begin Slurm Prolog: Jul-21-2026 21:29:27
+Job ID:    5525691
+User ID:   nsulay3
+Account:   coc
+Job name:  lora_busi
+Partition: coc-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5525691 on atl1-1-03-007-33-0.pace.gatech.edu
+Tue Jul 21 21:29:27 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-PCIE-40GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   47C    P0             49W /  250W |       0MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+config: configs/experiment/sam3_lora_busi.yaml
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+device: cuda
+config: configs/experiment/sam3_lora_busi.yaml
+splits: {'train': 8, 'val': 64, 'test': 131}
+trainable params: 1.066113 M
+epoch 1: train_loss=1.2827  val_dice=0.4521  val_nsd=0.0315
+  saved checkpoints/sam3_lora_busi_test/best.pt (dice=0.4521)
+epoch 2: train_loss=0.9645  val_dice=0.4768  val_nsd=0.0450
+  saved checkpoints/sam3_lora_busi_test/best.pt (dice=0.4768)
+SMOKE OK — best_dice=0.4768  peak_VRAM=3.5GB
+done
+---------------------------------------
+Begin Slurm Epilog: Jul-21-2026 21:30:54
+Job ID:        5525691
+User ID:       nsulay3
+Account:       coc
+Job name:      lora_busi
+Resources:     cpu=8,gres/gpu:a100=1,mem=32G,node=1
+Rsrc Used:     cput=00:11:36,vmem=0,walltime=00:01:27,mem=12071688K,energy_used=0
+Partition:     coc-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-007-33-0
+---------------------------------------

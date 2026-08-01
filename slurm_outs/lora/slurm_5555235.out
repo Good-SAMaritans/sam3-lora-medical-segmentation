@@ -1,0 +1,96 @@
+---------------------------------------
+Begin Slurm Prolog: Aug-01-2026 00:39:23
+Job ID:    5555235
+User ID:   nsulay3
+Account:   coc
+Job name:  eval_lora
+Partition: ice-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5555235 on atl1-1-03-012-23-0.pace.gatech.edu
+Sat Aug  1 00:39:23 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:2A:00.0 Off |                    0 |
+| N/A   33C    P0             86W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+datasets: all
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+device: cuda
+
+========================================================================
+busi  |  size=512  normalize=None  num_classes=1
+========================================================================
+  loaded epoch 16 (val dice 0.7819)
+
+dataset=busi  scored_at=512  tol=2  ignore_index=None  normalize=None  device=cuda
+split   images  precision     recall         f1        iou       dice        nsd
+--------------------------------------------------------------------------------
+val         64     0.7822     0.8227     0.7819     0.7002     0.7819     0.3857
+test       131     0.7956     0.8279     0.7853     0.7072     0.7853     0.4009
+
+wrote /storage/ice1/9/1/nsulay3/project/group_project/results/metrics/lora_eval.csv
+
+========================================================================
+kvasir  |  size=512  normalize=None  num_classes=1
+========================================================================
+  loaded epoch 18 (val dice 0.9269)
+
+dataset=kvasir  scored_at=512  tol=2  ignore_index=None  normalize=None  device=cuda
+split   images  precision     recall         f1        iou       dice        nsd
+--------------------------------------------------------------------------------
+val        100     0.9489     0.9241     0.9269     0.8768     0.9269     0.6510
+test       200     0.9209     0.9409     0.9162     0.8655     0.9162     0.6586
+
+wrote /storage/ice1/9/1/nsulay3/project/group_project/results/metrics/lora_eval.csv
+
+========================================================================
+monusac  |  size=512  normalize=None  num_classes=5
+========================================================================
+  loaded epoch 19 (val dice 0.7424)
+
+dataset=monusac  scored_at=512  tol=2  ignore_index=5  normalize=None  device=cuda
+split   images  precision     recall         f1        iou       dice        nsd
+--------------------------------------------------------------------------------
+val         21     0.8006     0.7377     0.7424     0.6169     0.7424     0.7247
+test       101     0.8199     0.7477     0.7589     0.6379     0.7589     0.6340
+
+wrote /storage/ice1/9/1/nsulay3/project/group_project/results/metrics/lora_eval.csv
+
+========================================================================
+SUMMARY - LoRA arm, test split
+========================================================================
+dataset     precision     recall         f1        iou       dice        nsd
+busi           0.7956     0.8279     0.7853     0.7072     0.7853     0.4009
+kvasir         0.9209     0.9409     0.9162     0.8655     0.9162     0.6586
+monusac        0.8199     0.7477     0.7589     0.6379     0.7589     0.6340
+
+appended to /storage/ice1/9/1/nsulay3/project/group_project/results/metrics/lora_eval.csv
+done
+---------------------------------------
+Begin Slurm Epilog: Aug-01-2026 00:41:53
+Job ID:        5555235
+User ID:       nsulay3
+Account:       coc
+Job name:      eval_lora
+Resources:     cpu=8,gres/gpu:h100=1,mem=32G,node=1
+Rsrc Used:     cput=00:20:00,vmem=0,walltime=00:02:30,mem=10734308K,energy_used=0
+Partition:     ice-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-012-23-0
+---------------------------------------

@@ -1,0 +1,18 @@
+# smoke test: SAM3 LoRA arm on a tiny BUSI subset.
+data:
+  name: busi
+  size: 256                  # deliberately NOT the 512 team standard: this is a plumbing check, and 256
+  img_size: 256              # also exercises the mask-upsample branch of Trainer._step_batch (256 -> 512 head out)
+  normalize: null
+  n_train: 8
+  batch_size: 1
+  num_workers: 0   # in-process loading; worker spawn is pure overhead for 8 images on mac
+  aug_preset: none
+model:
+  finetune_mode: lora        # was: full
+  num_classes: 1
+train:
+  epochs: 2
+  backbone_lr: 1.0e-4        # = the ADAPTER lr in this arm (they're all that's trainable in the backbone)
+  head_lr: 1.0e-4
+  ckpt_dir: checkpoints/sam3_lora_busi_test   # local; checkpoints/ is gitignored

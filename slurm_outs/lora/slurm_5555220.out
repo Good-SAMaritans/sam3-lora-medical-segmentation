@@ -1,0 +1,83 @@
+---------------------------------------
+Begin Slurm Prolog: Aug-01-2026 00:10:46
+Job ID:    5555220
+User ID:   nsulay3
+Account:   coc
+Job name:  eval_lora
+Partition: ice-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5555220 on atl1-1-03-013-13-0.pace.gatech.edu
+Sat Aug  1 00:10:46 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:C7:00.0 Off |                    0 |
+| N/A   41C    P0            104W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+datasets: all
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+device: cuda
+
+========================================================================
+busi  |  size=512  normalize=None  num_classes=1
+========================================================================
+Traceback (most recent call last):
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/eval_lora.py", line 105, in <module>
+    main()
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/eval_lora.py", line 92, in main
+    r = score(dataset, device, csv_path=str(out_csv))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/eval_lora.py", line 67, in score
+    model = Sam3MedSeg(finetune_mode=model_cfg["finetune_mode"], num_classes=num_classes)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/../src/medseg/models/sam3_medseg.py", line 29, in __init__
+    self.backbone = Sam3Backbone()
+                    ^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/../src/medseg/models/sam3_backbone.py", line 42, in __init__
+    full = build_sam3_image_model()
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model_builder.py", line 605, in build_sam3_image_model
+    vision_encoder = _create_vision_backbone(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model_builder.py", line 517, in _create_vision_backbone
+    position_encoding = _create_position_encoding(precompute_resolution=1008)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model_builder.py", line 68, in _create_position_encoding
+    return PositionEmbeddingSine(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model/position_encoding.py", line 55, in __init__
+    tensors = torch.zeros((1, 1) + size, device="cuda")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
+Search for `cudaErrorDevicesUnavailable' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+---------------------------------------
+Begin Slurm Epilog: Aug-01-2026 00:10:55
+Job ID:        5555220
+User ID:       nsulay3
+Account:       coc
+Job name:      eval_lora
+Resources:     cpu=8,gres/gpu:h100=1,mem=32G,node=1
+Rsrc Used:     cput=00:01:12,vmem=0,walltime=00:00:09,mem=461072K,energy_used=0
+Partition:     ice-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-013-13-0
+---------------------------------------

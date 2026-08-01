@@ -17,7 +17,8 @@ from .sam3_backbone import Sam3Backbone
 from .seg_head import FpnSegHead
 from .lora import LoRALayer, LoRA_qkv
 
-SAM3_SIZE = 1008
+SAM3_INPUT_SIZE = 1008
+SAM3_OUT_SIZE = 512  # head output layer - matches U-Net for fair scoring
 SAM3_MEAN = 0.5
 SAM3_STD = 0.5
 
@@ -26,7 +27,7 @@ class Sam3MedSeg(nn.Module):
         super().__init__()
         self.finetune_mode = finetune_mode
         self.backbone = Sam3Backbone()
-        self.head = FpnSegHead(in_channels=self.backbone.out_channels, num_classes=num_classes, out_size=SAM3_SIZE)
+        self.head = FpnSegHead(in_channels=self.backbone.out_channels, num_classes=num_classes, out_size=SAM3_OUT_SIZE)
         self.lora_r = lora_r
         self.lora_alpha = lora_alpha
         self._apply_finetune_mode(finetune_mode)
@@ -34,8 +35,8 @@ class Sam3MedSeg(nn.Module):
     # --- input adapter (decoupled from shared data layer) ---
     def _prep_input(self, image: torch.Tensor) -> torch.Tensor:
         # image: (B,3,H,W) in [0,1]. Resize to 1008, normalize with mean/std 0.5.
-        if image.shape[-2:] != (SAM3_SIZE, SAM3_SIZE):
-            image = F.interpolate(image, size=(SAM3_SIZE, SAM3_SIZE), mode="bilinear", align_corners=False)
+        if image.shape[-2:] != (SAM3_INPUT_SIZE, SAM3_INPUT_SIZE):
+            image = F.interpolate(image, size=(SAM3_INPUT_SIZE, SAM3_INPUT_SIZE), mode="bilinear", align_corners=False)
         return (image - SAM3_MEAN) / SAM3_STD
 
     # finetune strategy dispatch

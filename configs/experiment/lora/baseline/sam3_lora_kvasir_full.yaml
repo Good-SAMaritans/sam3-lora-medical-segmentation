@@ -1,0 +1,19 @@
+# full training run: SAM3 LoRA arm on the complete Kvasir train split.
+data:
+  name: kvasir                  # RGB endoscopy polyps (vs BUSI grayscale ultrasound)
+  size: 512                     # team standard as of 2026-07-31; matches the U-Net/YOLO arms.
+  img_size: 512                 # supersedes the 256 runs; the hp sweep was re-run at 512 to match
+  normalize: null
+  n_train: null                 # full train split
+  batch_size: 1
+  num_workers: 2
+  aug_preset: medseg_default
+model:
+  finetune_mode: lora
+  num_classes: 1
+train:
+  epochs: 20
+  backbone_lr: 1.0e-4           # = the adapter lr (adapters are the only trainable backbone params)
+  head_lr: 1.0e-4
+  ckpt_dir: checkpoints/sam3_lora_kvasir_full_512   # own dir, separate from BUSI; _512 mirrors the
+                                                    # hp sweep so a rerun can't clobber the 256-era run
