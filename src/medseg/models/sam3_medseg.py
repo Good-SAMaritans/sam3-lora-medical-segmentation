@@ -2,7 +2,7 @@
 sam3_medseg.py - SAM 3 medical segmentation model.
 
 Pipeline: (B,3,256,256) in [0,1]  -> resize 1008 + normalize(0.5)  ->
-SAM 3 vision backbone (bf16 autocast) -> FpnSegHead -> (B,1,1008,1008) logits.
+SAM 3 vision backbone (bf16 autocast) -> FpnSegHead -> (B,C,512,512) logits.
 
 The input adapter (resize + normalize) lives HERE on purpose, 
 so this arm does not depend on the shared data layer being changed to 1008 yet.
@@ -39,6 +39,17 @@ class Sam3MedSeg(nn.Module):
             image = F.interpolate(image, size=(SAM3_INPUT_SIZE, SAM3_INPUT_SIZE), mode="bilinear", align_corners=False)
         return (image - SAM3_MEAN) / SAM3_STD
 
+    def _unfreeze_neck(self):
+        # neck = vision_backbone params NOT in the ViTDet trunk
+        vb = self.backbone.backbone.vision_backbone
+        trunk_ids = {id(p) for p in vb.trunk.parameters()}
+        n = 0
+        for p in vb.parameters():
+            if id(p) not in trunk_ids:
+                p.requires_grad = True
+                n += 1
+        return n
+
     # finetune strategy dispatch
     def _apply_finetune_mode(self, mode: str):
         if mode == "full":
@@ -49,6 +60,7 @@ class Sam3MedSeg(nn.Module):
                 p.requires_grad = False
             for p in self.head.parameters():
                 p.requires_grad = True
+            self._unfreeze_neck() #after freezing backbone + unfreezing head, add `self._unfreeze_neck()`.
         elif mode == "lora":
             # freeze ALL backbone params. inject LoRA into each fused qkv,
             # head says trainable 
@@ -62,6 +74,7 @@ class Sam3MedSeg(nn.Module):
                 lora_q = LoRALayer( dim, dim, r=self.lora_r, alpha=self.lora_alpha)
                 lora_v = LoRALayer(dim, dim,  r=self.lora_r, alpha=self.lora_alpha)
                 block.attn.qkv = LoRA_qkv(qkv, lora_q, lora_v)
+            self._unfreeze_neck() #after freezing backbone + injecting LoRA into `trunk...blocks[*].attn.qkv`, add `self._unfreeze_neck()`.
             
         else:
             raise ValueError(f"unknown finetune_mode: {mode}")

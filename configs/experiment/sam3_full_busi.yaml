@@ -1,8 +1,8 @@
 # small test to validate: SAM3 full finetune on a tiny BUSI subset.
 data:
   name: busi
-  size: 256
-  img_size: 256 # data layer stays 256; model resizes to 1008 internally
+  size: 512
+  img_size: 512 # data layer stays 256; model resizes to 1008 internally
   normalize: null
   n_train: 8 # tiny subset
   batch_size: 1
