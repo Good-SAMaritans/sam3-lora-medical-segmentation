@@ -1,21 +1,99 @@
-
-# do... pip install -r requirements.txt
-
-numpy>=1.24
-torch>=2.0
-albumentations>=2.0.8      # transforms.py verified against 2.0.8 (new fill/std_range API)
-opencv-python>=4.8         # cv2, used directly by transforms.py
-Pillow>=10.0               # PIL image handling
-PyYAML>=6.0                # DataConfig.from_yaml
-medsegbench               # dataset source (MedSegBench .npz + registry)
-matplotlib>=3.7
-
-# Tests
-pytest>=7.4 # incase we want to test things
-
-# --- Added with the model / engine / scripts modules (not yet imported) ---
-# torchvision>=0.15
-# segment-anything          # SAM ViT-B backbone
-# matplotlib>=3.7           # scripts/make_figures.py
-# wandb>=0.16               # experiment tracking
-# tqdm>=4.65
+Team Name
+Good SAMaritans
+Project Title
+Segment Anything, Medically: Strategies for Adapting SAM to Medical Imaging
+Group Members
+Nikhil Sulay, Renzo Silvera, Razeen Basunia, Shin Koo Kang
+Project Summary
+Medical image segmentation, delineating organs and lesions at the pixel level, is central to
+diagnosis and treatment planning, but training a separate model for each modality or task
+is slow and labor intensive. Foundation models such as the Segment Anything Model (SAM)
+could remove that per-task burden, but SAM is trained on natural images and performs
+poorly on medical data, especially on targets with weak boundaries or low contrast. This
+project investigates how to adapt SAM into an effective medical segmenter: why it fails out
+of the box, how fine-tuning changes its behavior, and which adaptation strategy works
+best. Prior work (MedSAM) adapted SAM using a single full fine-tuning recipe, so our
+distinct contribution is a controlled comparison of strategies, decoder-only versus full finetuning, alongside an analysis of where adaptation helps and how an adapted foundation
+model compares to a specialist trained from scratch. Since segmentation is a learned
+dense-prediction task and SAM is built on a Vision Transformer, this is fundamentally a
+problem of transfer, architecture, and optimization.
+Approach
+We will start from pretrained SAM and fine-tune it into a domain-adapted medical
+segmenter, implementing the fine-tuning pipeline ourselves, including the bounding-box
+prompt simulation that turns ground-truth masks into the box prompts SAM expects (with
+random perturbations, following MedSAM). The central experiment is a controlled
+comparison of adaptation strategies, decoder-only (freezing the encoder), LoRA (low-rank
+updates injected into the encoder's attention layers), and full fine-tuning, holding data and
+schedule fixed so differences are attributable to the strategy. We will benchmark these
+against zero-shot SAM (lower baseline) and a U-Net we implement and train from scratch
+(specialist comparison), letting us ask whether adapting a foundation model beats training
+a small specialist directly. We will work in PyTorch and analyze the training process itself:
+loss curves, overfitting, hyperparameter choices, and how each strategy trades trainable
+parameters for accuracy.
+Resources / Related Work & Papers
+The state of the art for general segmentation is the Segment Anything Model (Kirillov et al.,
+2023), a promptable foundation model trained on roughly a billion masks that segments
+objects from point or box prompts. MedSAM (Ma et al., 2024) is our direct precedent: it
+fine-tunes SAM on over a million medical image-mask pairs across ten modalities, matching
+or beating modality-specific specialists, while documenting that out-of-the-box SAM fails on
+weak-boundary targets. MedSAM used a single full fine-tuning recipe, so our work differs
+by systematically comparing adaptation strategies and analyzing where adaptation helps,
+rather than by maximizing scale. For the specialist baseline we draw on U-Net
+(Ronneberger et al., 2015) and Attention U-Net (Oktay et al., 2018), the standard medicalsegmentation architectures. Our Dice and boundary-distance metrics follow common
+practice and the MedSAM evaluation.
+Datasets
+We propose two datasets, both public with expert masks, so we need not annotate data.
+• Kvasir-SEG (GI polyp segmentation, endoscopy, ~1,000 images, binary masks):
+https://datasets.simula.no/kvasir-seg/ . A well-known benchmark with many
+published baselines, letting us compare against reported numbers. MedSAM found
+SAM already does relatively well on endoscopy polyps, so this is our "SAM starts
+strong" case.
+• MedSegBench (35 standardized medical segmentation datasets, pip-installable):
+https://medsegbench.github.io/ . We will use one weak-boundary modality (for
+example an ultrasound set) as the contrasting "SAM starts poorly" case, where
+adaptation should help most.
+This pairing gives an easy-versus-hard modality comparison with little data-wrangling. We
+may add MedSegBench modalities later to broaden the analysis (see Scope). MedSegBench
+is released under non-commercial Creative Commons licenses, which is fine for a course
+project.
+Evaluation Plan
+We will measure quality with the Dice similarity coefficient (region overlap) and Normalized
+Surface Distance (boundary agreement), matching MedSAM so we can compare where
+applicable. Core comparisons are zero-shot SAM versus our adaptation strategies
+(decoder-only, LoRA, full fine-tuning) versus a from-scratch U-Net, on each dataset, with
+training and validation loss curves reported. The analysis we treat as central is where
+adaptation helps: per-structure breakdowns, behavior on weak- versus distinct-boundary
+targets, qualitative overlays comparing zero-shot and adapted outputs, and which strategy
+recovers the most performance per trainable parameter. As a smaller supporting
+experiment we will study how performance scales with the number of fine-tuning images.
+Risks and Scope
+The main risk is implementation complexity: SAM is promptable, so our training loop must
+simulate box prompts from masks, which we expect to take a few days to get right.
+Compute is manageable rather than a blocker: we will develop and run lighter experiments
+on Colab Pro and use the PACE-ICE SLURM cluster for heavier fine-tuning and ablation
+sweeps, with frequent checkpointing. The remaining risk is scope creep, so we separate
+required from stretch work and will not expand the required set just because more
+compute is available.
+Required: zero-shot SAM baseline; decoder-only, LoRA, and full fine-tuning; a from-scratch
+U-Net comparison; on two datasets (Kvasir-SEG and one weak-boundary MedSegBench
+modality).
+Stretch: adapters as an additional parameter-efficient variant; additional MedSegBench
+modalities for a broader cross-modality study; the data-efficiency curve.
+Ethical Implications
+Medical segmentation models can influence diagnosis and treatment, so a high benchmark
+Dice score must not be mistaken for clinical readiness; our work is a research study, not a
+deployment tool. We will note dataset limitations, including modality imbalance and source
+demographics, which can bias performance, and avoid overclaiming generalization beyond
+the modalities and tasks we test.
+References
+• Kirillov et al., "Segment Anything," 2023. https://arxiv.org/abs/2304.02643
+• Ma et al., "Segment Anything in Medical Images" (MedSAM), Nature
+Communications, 2024. https://doi.org/10.1038/s41467-024-44824-z
+• Ronneberger et al., "U-Net: Convolutional Networks for Biomedical Image
+Segmentation," 2015. https://arxiv.org/abs/1505.04597
+• Oktay et al., "Attention U-Net," 2018. https://arxiv.org/abs/1804.03999
+• Kuş & Aydin, "MedSegBench," Scientific Data, 2024.
+https://doi.org/10.1038/s41597-024-04159-2
+Use these to run from main folder.
+python scripts/yolo_export.py --name monusac --out data/yolo/monusac --size 512            
+python scripts/yolo_train.py --data data/yolo/kvasir/yolo/data.yaml --coco-root data/yolo/kvasir/coco --dataset kvasir --epochs 50 --imgsz 512 --name yolo_kvasir_2 --batch 16 --mosaic 0.75
