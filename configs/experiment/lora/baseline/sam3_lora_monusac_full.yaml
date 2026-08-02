@@ -1,0 +1,32 @@
+# Full training run: SAM3 LoRA arm on the complete MoNuSAC train split.
+#
+# The multi-class arm. Differs from the BUSI/Kvasir runs in three ways that matter:
+#   1. num_classes: 5 -> the head emits 5 logit channels and build_loss() picks
+#      CeDiceLoss instead of BceDiceLoss (see engine/losses.py).
+#   2. size/img_size 512, matching the U-Net arm. Nuclei are a few pixels across,
+#      so Dice shifts noticeably with resolution and the arms must agree on it.
+#   3. epochs 40 rather than 20. MoNuSAC has 188 train images against BUSI's 452,
+#      so 20 epochs would be 3.8k optimizer steps vs BUSI's 9.0k. 40 epochs (7.5k)
+#      keeps the number of updates roughly comparable.
+data:
+  name: monusac
+  size: 512
+  img_size: 512
+  normalize: null
+  n_train: null                 # full train split (188 images)
+  batch_size: 1                 # matches the BUSI/Kvasir full runs, so the arms are comparable
+  num_workers: 4
+  aug_preset: medseg_default
+model:
+  finetune_mode: lora
+  num_classes: 5                # 0-4; Ambiguous (5) is never a training target
+train:
+  epochs: 40
+  backbone_lr: 1.0e-4           # = the adapter lr. Pinned at the BUSI baseline for cross-dataset
+                                # comparability, though the BUSI sweep preferred 3e-4
+  head_lr: 1.0e-4
+  ignore_index: 5               # Ambiguous: don't-care at TEST time only (0 train/val examples).
+                                # Consumed by evaluation, not by Trainer.fit
+  ckpt_dir: checkpoints/sam3_lora_monusac_full_512   # this run's data was always 512, but the head now
+                                                     # emits 512 instead of 1008, so the pre-2026-07-31
+                                                     # checkpoint is a different model and is not reusable

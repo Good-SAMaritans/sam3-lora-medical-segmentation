@@ -1,0 +1,75 @@
+---------------------------------------
+Begin Slurm Prolog: Jul-27-2026 13:16:57
+Job ID:    5542163
+User ID:   nsulay3
+Account:   coc
+Job name:  lora_busi_lr1e-3
+Partition: coc-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5542163 on atl1-1-03-007-33-0.pace.gatech.edu
+Mon Jul 27 13:16:57 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.58.03              Driver Version: 595.58.03      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-PCIE-40GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   59C    P0             52W /  250W |       0MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+config: configs/experiment/sam3_lora_busi_lr1e-3.yaml
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+device: cuda
+config: configs/experiment/sam3_lora_busi_lr1e-3.yaml
+splits: {'train': 452, 'val': 64, 'test': 131}
+trainable params: 1.066113 M
+epoch 1: train_loss=0.6170  val_dice=0.7525  val_nsd=0.1699
+  saved checkpoints/sam3_lora_busi_lr1e-3/best.pt (dice=0.7525)
+epoch 2: train_loss=0.4250  val_dice=0.7338  val_nsd=0.1925
+epoch 3: train_loss=0.3969  val_dice=0.7174  val_nsd=0.1777
+epoch 4: train_loss=0.3699  val_dice=0.7584  val_nsd=0.2192
+  saved checkpoints/sam3_lora_busi_lr1e-3/best.pt (dice=0.7584)
+epoch 5: train_loss=0.3629  val_dice=0.7245  val_nsd=0.1385
+epoch 6: train_loss=0.3296  val_dice=0.6758  val_nsd=0.1328
+epoch 7: train_loss=0.3537  val_dice=0.6984  val_nsd=0.1482
+epoch 8: train_loss=0.3253  val_dice=0.7665  val_nsd=0.2139
+  saved checkpoints/sam3_lora_busi_lr1e-3/best.pt (dice=0.7665)
+epoch 9: train_loss=0.3437  val_dice=0.7350  val_nsd=0.2040
+epoch 10: train_loss=0.3148  val_dice=0.7425  val_nsd=0.1781
+epoch 11: train_loss=0.3362  val_dice=0.7617  val_nsd=0.1975
+epoch 12: train_loss=0.2966  val_dice=0.7446  val_nsd=0.2236
+epoch 13: train_loss=0.2937  val_dice=0.7776  val_nsd=0.2255
+  saved checkpoints/sam3_lora_busi_lr1e-3/best.pt (dice=0.7776)
+epoch 14: train_loss=0.2841  val_dice=0.7355  val_nsd=0.1673
+epoch 15: train_loss=0.3189  val_dice=0.7470  val_nsd=0.2131
+epoch 16: train_loss=0.2749  val_dice=0.7683  val_nsd=0.2070
+epoch 17: train_loss=0.2726  val_dice=0.7432  val_nsd=0.2044
+epoch 18: train_loss=0.2790  val_dice=0.7139  val_nsd=0.1923
+epoch 19: train_loss=0.2551  val_dice=0.7449  val_nsd=0.2088
+epoch 20: train_loss=0.2915  val_dice=0.7482  val_nsd=0.2061
+SMOKE OK — best_dice=0.7776  peak_VRAM=3.5GB
+done
+---------------------------------------
+Begin Slurm Epilog: Jul-27-2026 14:34:12
+Job ID:        5542163
+User ID:       nsulay3
+Account:       coc
+Job name:      lora_busi_lr1e-3
+Resources:     cpu=8,gres/gpu:a100=1,mem=32G,node=1
+Rsrc Used:     cput=10:18:00,vmem=0,walltime=01:17:15,mem=8727804K,energy_used=0
+Partition:     coc-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-03-007-33-0
+---------------------------------------

@@ -1,0 +1,19 @@
+# LR sweep point 3/3: adapter lr 1e-3 (baseline 1e-4 = the existing busi_full run).
+# Identical to sam3_lora_busi_full.yaml except backbone_lr and ckpt_dir.
+data:
+  name: busi
+  size: 512
+  img_size: 512
+  normalize: null
+  n_train: null                 # full train split (452 images), not the 8-image smoke subset
+  batch_size: 1
+  num_workers: 2                # parallel loading; safe now that the script has the __main__ guard
+  aug_preset: medseg_default    # real augmentation (was "none" for the deterministic smoke test)
+model:
+  finetune_mode: lora
+  num_classes: 1
+train:
+  epochs: 20
+  backbone_lr: 1.0e-3           # = the adapter lr (adapters are the only trainable backbone params)
+  head_lr: 1.0e-4
+  ckpt_dir: checkpoints/sam3_lora_busi_lr1e-3_512

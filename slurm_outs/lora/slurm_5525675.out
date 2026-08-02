@@ -1,0 +1,90 @@
+---------------------------------------
+Begin Slurm Prolog: Jul-21-2026 20:35:27
+Job ID:    5525675
+User ID:   nsulay3
+Account:   coc
+Job name:  lora_busi
+Partition: coc-gpu
+QOS:       coc-ice
+---------------------------------------
+job 5525675 on atl1-1-02-011-31-0.pace.gatech.edu
+Tue Jul 21 20:35:27 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-16GB           On  |   00000000:AF:00.0 Off |                    0 |
+| N/A   41C    P0             27W /  250W |       0MiB /  16384MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+config: configs/experiment/sam3_lora_busi.yaml
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/torch/cuda/__init__.py:371: UserWarning: Found GPU0 Tesla V100-PCIE-16GB which is of compute capability (CC) 7.0.
+The following list shows the CCs this version of PyTorch was built for and the hardware CCs it supports:
+- 7.5 which supports hardware CC >=7.5,<8.0
+- 8.0 which supports hardware CC >=8.0,<9.0 except {8.7}
+- 8.6 which supports hardware CC >=8.6,<9.0 except {8.7}
+- 9.0 which supports hardware CC >=9.0,<10.0
+- 10.0 which supports hardware CC >=10.0,<11.0 except {10.1}
+- 12.0 which supports hardware CC >=12.0,<13.0
+Please follow the instructions at https://pytorch.org/get-started/locally/ to install a PyTorch release that supports one of these CUDA versions: 12.6, 12.8
+  _warn_unsupported_code(d, device_cc, code_ccs)
+/storage/ice1/9/1/nsulay3/sam3/sam3/model/model_misc.py:70: UserWarning: Flash Attention is disabled as it requires a GPU with Ampere (8.0) CUDA capability.
+  OLD_GPU, USE_FLASH_ATTN, MATH_KERNEL_ON = get_sdpa_settings()
+/home/hice1/nsulay3/scratch/sam3-cluster/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+device: cuda
+config: configs/experiment/sam3_lora_busi.yaml
+splits: {'train': 8, 'val': 64, 'test': 131}
+Traceback (most recent call last):
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/train_lora.py", line 47, in <module>
+    main()
+  File "/storage/ice1/9/1/nsulay3/project/group_project/scripts/train_lora.py", line 26, in main
+    model = Sam3MedSeg(**cfg["model"])
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/project/group_project/src/medseg/models/sam3_medseg.py", line 28, in __init__
+    self.backbone = Sam3Backbone()
+                    ^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/project/group_project/src/medseg/models/sam3_backbone.py", line 42, in __init__
+    full = build_sam3_image_model()
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model_builder.py", line 605, in build_sam3_image_model
+    vision_encoder = _create_vision_backbone(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model_builder.py", line 517, in _create_vision_backbone
+    position_encoding = _create_position_encoding(precompute_resolution=1008)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model_builder.py", line 68, in _create_position_encoding
+    return PositionEmbeddingSine(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/ice1/9/1/nsulay3/sam3/sam3/model/position_encoding.py", line 55, in __init__
+    tensors = torch.zeros((1, 1) + size, device="cuda")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: CUDA error: no kernel image is available for execution on the device
+Search for `cudaErrorNoKernelImageForDevice' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+---------------------------------------
+Begin Slurm Epilog: Jul-21-2026 20:35:53
+Job ID:        5525675
+User ID:       nsulay3
+Account:       coc
+Job name:      lora_busi
+Resources:     cpu=8,gres/gpu:v100=1,mem=32G,node=1
+Rsrc Used:     cput=00:03:20,vmem=0,walltime=00:00:25,mem=1177032K,energy_used=0
+Partition:     coc-gpu
+QOS:           coc-ice
+Nodes:         atl1-1-02-011-31-0
+---------------------------------------

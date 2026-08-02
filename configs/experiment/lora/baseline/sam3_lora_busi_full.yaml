@@ -1,0 +1,19 @@
+# full training run: SAM3 LoRA arm on the complete BUSI train split.
+data:
+  name: busi
+  size: 512                     # team standard as of 2026-07-31; matches the U-Net/YOLO arms.
+  img_size: 512                 # supersedes the 256 runs; the hp sweep was re-run at 512 to match
+  normalize: null
+  n_train: null                 # full train split (452 images), not the 8-image smoke subset
+  batch_size: 1
+  num_workers: 2                # parallel loading; safe now that the script has the __main__ guard
+  aug_preset: medseg_default    # real augmentation (was "none" for the deterministic smoke test)
+model:
+  finetune_mode: lora
+  num_classes: 1
+train:
+  epochs: 20                    # ~1 hr/epoch on MPS; best.pt keeps the best-so-far, so a partial run is fine
+  backbone_lr: 1.0e-4           # = the adapter lr (adapters are the only trainable backbone params)
+  head_lr: 1.0e-4
+  ckpt_dir: checkpoints/sam3_lora_busi_full_512   # _512 suffix mirrors the hp sweep, so a rerun
+                                                  # can't overwrite the 256-era checkpoint
